@@ -61,6 +61,10 @@ type DirectorInfo struct {
 	CPI  string
 }
 
+type Deployment struct {
+	Name string
+}
+
 func NewClient(config Config) Client {
 	if config.TaskPollingInterval == time.Duration(0) {
 		config.TaskPollingInterval = 5 * time.Second
@@ -402,4 +406,29 @@ func (c Client) ResolveManifestVersions(yaml []byte) ([]byte, error) {
 	}
 
 	return candiedyaml.Marshal(m)
+}
+
+func (c Client) Deployments() ([]Deployment, error) {
+	request, err := http.NewRequest("GET", fmt.Sprintf("%s/deployments", c.config.URL), nil)
+	if err != nil {
+		return nil, err
+	}
+	request.SetBasicAuth(c.config.Username, c.config.Password)
+
+	response, err := transport.RoundTrip(request)
+	if err != nil {
+		return nil, err
+	}
+
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected response %d %s", response.StatusCode, http.StatusText(response.StatusCode))
+	}
+
+	var deployments []Deployment
+	err = json.NewDecoder(response.Body).Decode(&deployments)
+	if err != nil {
+		return nil, err
+	}
+
+	return deployments, nil
 }

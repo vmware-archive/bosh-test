@@ -17,6 +17,102 @@ import (
 )
 
 var _ = Describe("client", func() {
+	Context("Deployments", func() {
+		It("retrieves all deployments from the director", func() {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				Expect(r.URL.Path).To(Equal("/deployments"))
+				Expect(r.Method).To(Equal("GET"))
+
+				username, password, ok := r.BasicAuth()
+				Expect(ok).To(BeTrue())
+				Expect(username).To(Equal("some-username"))
+				Expect(password).To(Equal("some-password"))
+
+				w.Write([]byte(`[
+					{"name": "deployment1"},
+					{"name": "deployment2"},
+					{"name": "deployment3"}
+				]`))
+			}))
+
+			client := bosh.NewClient(bosh.Config{
+				URL:      server.URL,
+				Username: "some-username",
+				Password: "some-password",
+			})
+
+			deployments, err := client.Deployments()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(deployments).To(Equal(
+				[]bosh.Deployment{
+					{
+						Name: "deployment1",
+					},
+					{
+						Name: "deployment2",
+					},
+					{
+						Name: "deployment3",
+					},
+				},
+			))
+		})
+
+		Context("failure cases", func() {
+			It("error on a malformed URL", func() {
+				client := bosh.NewClient(bosh.Config{
+					URL:      "%%%%%%%%",
+					Username: "some-username",
+					Password: "some-password",
+				})
+
+				_, err := client.Deployments()
+				Expect(err).To(MatchError(ContainSubstring("invalid URL escape")))
+			})
+
+			It("error on an empty URL", func() {
+				client := bosh.NewClient(bosh.Config{
+					URL:      "",
+					Username: "some-username",
+					Password: "some-password",
+				})
+
+				_, err := client.Deployments()
+				Expect(err).To(MatchError(ContainSubstring("unsupported protocol")))
+			})
+
+			It("errors on an unexpected status code", func() {
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusBadGateway)
+				}))
+
+				client := bosh.NewClient(bosh.Config{
+					URL:      server.URL,
+					Username: "some-username",
+					Password: "some-password",
+				})
+
+				_, err := client.Deployments()
+				Expect(err).To(MatchError("unexpected response 502 Bad Gateway"))
+			})
+
+			It("error on malformed JSON", func() {
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.Write([]byte(`%%%%%%%%`))
+				}))
+
+				client := bosh.NewClient(bosh.Config{
+					URL:      server.URL,
+					Username: "some-username",
+					Password: "some-password",
+				})
+
+				_, err := client.Deployments()
+				Expect(err).To(MatchError(ContainSubstring("invalid character")))
+			})
+		})
+	})
+
 	Context("ScanAndFix", func() {
 		It("scans and fixes all instances in a deployment", func() {
 			var callCount int
