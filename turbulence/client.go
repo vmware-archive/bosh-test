@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 )
@@ -14,6 +14,17 @@ import (
 type Client struct {
 	baseURL          string
 	operationTimeout time.Duration
+	pollingInterval  time.Duration
+}
+
+type Response struct {
+	ID                   string           `json:"ID"`
+	ExecutionCompletedAt string           `json:"ExecutionCompletedAt"`
+	Events               []*ResponseEvent `json:"Events"`
+}
+
+type ResponseEvent struct {
+	Error string `json:"Error"`
 }
 
 type deployment struct {
@@ -35,20 +46,11 @@ type killCommand struct {
 	Deployments []deployment
 }
 
-type Response struct {
-	ID                   string           `json:"ID"`
-	ExecutionCompletedAt string           `json:"ExecutionCompletedAt"`
-	Events               []*ResponseEvent `json:"Events"`
-}
-
-type ResponseEvent struct {
-	Error string `json:"Error"`
-}
-
-func NewClient(baseURL string) Client {
+func NewClient(baseURL string, operationTimeout time.Duration, pollingInterval time.Duration) Client {
 	return Client{
 		baseURL:          baseURL,
-		operationTimeout: 5 * time.Minute,
+		operationTimeout: operationTimeout,
+		pollingInterval:  pollingInterval,
 	}
 }
 
@@ -68,9 +70,63 @@ func (c Client) KillIndices(deploymentName, jobName string, indices []int) error
 		return err
 	}
 
-	request, err := http.NewRequest("POST", c.baseURL+"/api/v1/incidents", bytes.NewBuffer(jsonCommand))
+	turbulenceResponse, err := c.makeRequest("POST", c.baseURL+"/api/v1/incidents", bytes.NewBuffer(jsonCommand))
 	if err != nil {
 		return err
+	}
+
+	return c.pollRequestCompletedDeletingVM(turbulenceResponse.ID)
+}
+
+func (c Client) pollRequestCompletedDeletingVM(id string) error {
+	startTime := time.Now()
+	for {
+		incidentCompleted, err := c.isIncidentCompleted(id)
+		if err != nil {
+			return err
+		}
+
+		if incidentCompleted {
+			return nil
+		}
+
+		if time.Now().Sub(startTime) > c.operationTimeout {
+			return errors.New(fmt.Sprintf("Did not finish deleting VM in time: %d", c.operationTimeout))
+		}
+
+		time.Sleep(c.pollingInterval)
+	}
+
+	return nil
+}
+
+func (c Client) isIncidentCompleted(id string) (bool, error) {
+	turbulenceResponse, err := c.makeRequest("GET", fmt.Sprintf("%s/api/v1/incidents/%s", c.baseURL, id), nil)
+	if err != nil {
+		return false, err
+	}
+
+	if turbulenceResponse.ExecutionCompletedAt != "" {
+		if len(turbulenceResponse.Events) == 0 {
+			return false, errors.New("There should at least be one Event in response from turbulence.")
+		}
+
+		for _, event := range turbulenceResponse.Events {
+			if event.Error != "" {
+				return false, errors.New(event.Error)
+			}
+		}
+
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func (c Client) makeRequest(method string, path string, body io.Reader) (Response, error) {
+	request, err := http.NewRequest(method, path, body)
+	if err != nil {
+		return Response{}, err
 	}
 
 	tr := &http.Transport{
@@ -80,71 +136,14 @@ func (c Client) KillIndices(deploymentName, jobName string, indices []int) error
 
 	resp, err := client.Do(request)
 	if err != nil {
-		return err
+		return Response{}, err
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	var turbulenceResponse Response
+	err = json.NewDecoder(resp.Body).Decode(&turbulenceResponse)
 	if err != nil {
-		return err
+		return Response{}, errors.New("Unable to decode turbulence response.")
 	}
 
-	turbulenceResponse := new(Response)
-	err = json.Unmarshal(body, turbulenceResponse)
-	if err != nil {
-		return err
-	}
-
-	return c.pollRequestCompletedDeletingVM(turbulenceResponse.ID)
-}
-
-func (c Client) pollRequestCompletedDeletingVM(id string) error {
-	request, err := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/incidents/%s", c.baseURL, id), nil)
-	if err != nil {
-		return err
-	}
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
-
-	startTime := time.Now()
-	for {
-		resp, err := client.Do(request)
-		if err != nil {
-			return err
-		}
-
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-
-		turbulenceResponse := new(Response)
-		err = json.Unmarshal(body, turbulenceResponse)
-		if err != nil {
-			return err
-		}
-
-		if turbulenceResponse.ExecutionCompletedAt != "" {
-			if len(turbulenceResponse.Events) == 0 {
-				return errors.New("There should at least be one Event in response from turbulence.")
-			}
-
-			for _, event := range turbulenceResponse.Events {
-				if event.Error != "" {
-					return errors.New(event.Error)
-				}
-			}
-
-			return nil
-		}
-
-		if time.Now().Sub(startTime) > c.operationTimeout {
-			return errors.New(fmt.Sprintf("Did not finish deleting VM in time: %d", c.operationTimeout))
-		}
-
-		time.Sleep(2 * time.Second)
-	}
-
-	return nil
+	return turbulenceResponse, nil
 }
