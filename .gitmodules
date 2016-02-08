@@ -1,0 +1,6 @@
+[submodule "bosh/vendor/github.com/cloudfoundry-incubator/candiedyaml"]
+	path = bosh/vendor/github.com/cloudfoundry-incubator/candiedyaml
+	url = https://github.com/cloudfoundry-incubator/candiedyaml.git
+[submodule "bosh/vendor/github.com/pivotal-cf-experimental/gomegamatchers"]
+	path = bosh/vendor/github.com/pivotal-cf-experimental/gomegamatchers
+	url = https://github.com/pivotal-cf-experimental/gomegamatchers.git

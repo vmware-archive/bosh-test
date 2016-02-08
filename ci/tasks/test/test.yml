@@ -1,0 +1,10 @@
+---
+platform: linux
+
+image: docker:///cfinfrastructure/bosh-test
+
+inputs:
+- name: bosh-test
+
+run:
+  path: bosh-test/ci/tasks/test/test

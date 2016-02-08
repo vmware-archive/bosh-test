@@ -1,0 +1,20 @@
+#!/bin/bash -eu
+
+function run_tests() {
+  local dir
+  dir="${1}"
+
+  pushd "${dir}" > /dev/null
+    GO15VENDOREXPERIMENT=1 ginkgo -succinct .
+  popd > /dev/null
+}
+
+function main() {
+  ROOT_DIRECTORY="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+  pushd "${ROOT_DIRECTORY}" > /dev/null
+    run_tests bosh
+    run_tests turbulence
+  popd > /dev/null
+}
+
+main
