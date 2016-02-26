@@ -503,6 +503,22 @@ jobs:
 				_, err := client.Info()
 				Expect(err).To(MatchError(ContainSubstring("unsupported protocol")))
 			})
+
+			It("errors on an unexpected status code", func() {
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusBadGateway)
+				}))
+
+				client := bosh.NewClient(bosh.Config{
+					URL:      server.URL,
+					Username: "some-username",
+					Password: "some-password",
+				})
+
+				_, err := client.Info()
+				Expect(err).To(MatchError("unexpected response 502 Bad Gateway"))
+			})
+
 		})
 	})
 

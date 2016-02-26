@@ -263,6 +263,10 @@ func (c Client) Info() (DirectorInfo, error) {
 		return DirectorInfo{}, err
 	}
 
+	if response.StatusCode != http.StatusOK {
+		return DirectorInfo{}, fmt.Errorf("unexpected response %d %s", response.StatusCode, http.StatusText(response.StatusCode))
+	}
+
 	info := DirectorInfo{}
 	err = json.NewDecoder(response.Body).Decode(&info)
 	if err != nil {
