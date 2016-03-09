@@ -66,7 +66,7 @@ type Deployment struct {
 }
 
 type Task struct {
-	Id          string
+	Id          int
 	State       string
 	Description string
 	Timestamp   time.Time
@@ -75,7 +75,7 @@ type Task struct {
 }
 
 type TaskOutput struct {
-	Time     int
+	Time     int64
 	Stage    string
 	Tags     []string
 	Total    int
@@ -165,22 +165,22 @@ func (c Client) checkTask(location string) (Task, error) {
 	return task, nil
 }
 
-func (c Client) checkTaskStatus(location string) error {
+func (c Client) checkTaskStatus(location string) (int, error) {
 	for {
 		task, err := c.checkTask(location)
 		if err != nil {
-			return err
+			return 0, err
 		}
 
 		switch task.State {
 		case "done":
-			return nil
+			return task.Id, nil
 		case "error":
-			return fmt.Errorf("bosh task failed with an error status %q", task.Result)
+			return task.Id, fmt.Errorf("bosh task failed with an error status %q", task.Result)
 		case "errored":
-			return fmt.Errorf("bosh task failed with an errored status %q", task.Result)
+			return task.Id, fmt.Errorf("bosh task failed with an errored status %q", task.Result)
 		case "cancelled":
-			return errors.New("bosh task was cancelled")
+			return task.Id, errors.New("bosh task was cancelled")
 		default:
 			time.Sleep(c.config.TaskPollingInterval)
 		}
@@ -282,7 +282,7 @@ func (c Client) DeploymentVMs(name string) ([]VM, error) {
 
 	location := response.Header.Get("Location")
 
-	err = c.checkTaskStatus(location)
+	_, err = c.checkTaskStatus(location)
 	if err != nil {
 		return []VM{}, err
 	}
@@ -340,14 +340,14 @@ func (c Client) Info() (DirectorInfo, error) {
 	return info, nil
 }
 
-func (c Client) Deploy(manifest []byte) error {
+func (c Client) Deploy(manifest []byte) (int, error) {
 	if len(manifest) == 0 {
-		return errors.New("a valid manifest is required to deploy")
+		return 0, errors.New("a valid manifest is required to deploy")
 	}
 
 	request, err := http.NewRequest("POST", fmt.Sprintf("%s/deployments", c.config.URL), bytes.NewBuffer(manifest))
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	request.Header.Set("Content-Type", "text/yaml")
@@ -355,11 +355,11 @@ func (c Client) Deploy(manifest []byte) error {
 
 	response, err := transport.RoundTrip(request)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if response.StatusCode != http.StatusFound {
-		return fmt.Errorf("unexpected response %d %s", response.StatusCode, http.StatusText(response.StatusCode))
+		return 0, fmt.Errorf("unexpected response %d %s", response.StatusCode, http.StatusText(response.StatusCode))
 	}
 
 	return c.checkTaskStatus(response.Header.Get("Location"))
@@ -412,7 +412,7 @@ func (c Client) ScanAndFix(yaml []byte) error {
 		return fmt.Errorf("unexpected response %d %s", response.StatusCode, http.StatusText(response.StatusCode))
 	}
 
-	err = c.checkTaskStatus(response.Header.Get("Location"))
+	_, err = c.checkTaskStatus(response.Header.Get("Location"))
 	if err != nil {
 		return err
 	}
@@ -441,7 +441,8 @@ func (c Client) DeleteDeployment(name string) error {
 		return fmt.Errorf("unexpected response %d %s", response.StatusCode, http.StatusText(response.StatusCode))
 	}
 
-	return c.checkTaskStatus(response.Header.Get("Location"))
+	_, err = c.checkTaskStatus(response.Header.Get("Location"))
+	return err
 }
 
 func (c Client) ResolveManifestVersions(yaml []byte) ([]byte, error) {

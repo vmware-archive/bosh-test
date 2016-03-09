@@ -886,9 +886,9 @@ jobs:
 					Expect(password).To(Equal("some-password"))
 
 					if callCount == 3 {
-						w.Write([]byte(`{"state": "done"}`))
+						w.Write([]byte(`{"id": 1, "state": "done"}`))
 					} else {
-						w.Write([]byte(`{"state": "processing"}`))
+						w.Write([]byte(`{"id": 1, "state": "processing"}`))
 					}
 					callCount++
 				default:
@@ -903,10 +903,11 @@ jobs:
 				TaskPollingInterval: time.Nanosecond,
 			})
 
-			err := client.Deploy([]byte("some-yaml"))
+			taskId, err := client.Deploy([]byte("some-yaml"))
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(callCount).To(Equal(4))
+			Expect(taskId).To(Equal(1))
 		})
 
 		Context("failure cases", func() {
@@ -930,7 +931,7 @@ jobs:
 					TaskPollingInterval: time.Nanosecond,
 				})
 
-				err := client.Deploy([]byte("some-yaml"))
+				_, err := client.Deploy([]byte("some-yaml"))
 
 				Expect(err).To(MatchError("unexpected response 400 Bad Request"))
 			})
@@ -955,7 +956,7 @@ jobs:
 					TaskPollingInterval: time.Nanosecond,
 				})
 
-				err := client.Deploy([]byte("some-yaml"))
+				_, err := client.Deploy([]byte("some-yaml"))
 				Expect(err).To(MatchError(errors.New("bosh task failed with an error status \"some-error-message\"")))
 			})
 
@@ -979,7 +980,7 @@ jobs:
 					TaskPollingInterval: time.Nanosecond,
 				})
 
-				err := client.Deploy([]byte("some-yaml"))
+				_, err := client.Deploy([]byte("some-yaml"))
 				Expect(err).To(MatchError(errors.New("bosh task failed with an errored status \"some-error-message\"")))
 			})
 
@@ -1003,7 +1004,7 @@ jobs:
 					TaskPollingInterval: time.Nanosecond,
 				})
 
-				err := client.Deploy([]byte("some-yaml"))
+				_, err := client.Deploy([]byte("some-yaml"))
 				Expect(err).To(MatchError(errors.New("bosh task was cancelled")))
 			})
 
@@ -1020,7 +1021,7 @@ jobs:
 					TaskPollingInterval: time.Nanosecond,
 				})
 
-				err := client.Deploy([]byte("some-yaml"))
+				_, err := client.Deploy([]byte("some-yaml"))
 				Expect(err).To(MatchError(ContainSubstring("invalid URL escape")))
 			})
 
@@ -1029,7 +1030,7 @@ jobs:
 					TaskPollingInterval: time.Nanosecond,
 				})
 
-				err := client.Deploy([]byte(""))
+				_, err := client.Deploy([]byte(""))
 				Expect(err).To(MatchError("a valid manifest is required to deploy"))
 			})
 
@@ -1039,7 +1040,7 @@ jobs:
 					TaskPollingInterval: time.Nanosecond,
 				})
 
-				err := client.Deploy([]byte("some-yaml"))
+				_, err := client.Deploy([]byte("some-yaml"))
 				Expect(err).To(MatchError(ContainSubstring("invalid URL escape")))
 			})
 
@@ -1049,7 +1050,7 @@ jobs:
 					TaskPollingInterval: time.Nanosecond,
 				})
 
-				err := client.Deploy([]byte("some-yaml"))
+				_, err := client.Deploy([]byte("some-yaml"))
 				Expect(err).To(MatchError(ContainSubstring("unsupported protocol")))
 			})
 
@@ -1067,7 +1068,7 @@ jobs:
 					TaskPollingInterval: time.Nanosecond,
 				})
 
-				err := client.Deploy([]byte("some-yaml"))
+				_, err := client.Deploy([]byte("some-yaml"))
 
 				Expect(err).To(MatchError(ContainSubstring("invalid character")))
 			})
