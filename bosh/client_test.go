@@ -17,6 +17,125 @@ import (
 )
 
 var _ = Describe("client", func() {
+	Context("GetTaskOutput", func() {
+		var server *httptest.Server
+
+		BeforeEach(func() {
+			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				Expect(r.URL.Path).To(Equal("/tasks/some-task-id/output"))
+				Expect(r.URL.RawQuery).To(Equal("type=event"))
+				Expect(r.Method).To(Equal("GET"))
+
+				w.Write([]byte(`
+{"time": 0, "stage": "some-stage", "tags": [ "some-tag" ], "total": 1, "task": "some-task-guid", "index": 1, "state": "some-state", "progress": 0}
+{"time": 1, "stage": "some-stage", "tags": [ "some-tag" ], "total": 1, "task": "some-task-guid", "index": 1, "state": "some-new-state", "progress": 0}
+				`))
+			}))
+		})
+
+		It("returns task event output for a given task", func() {
+			client := bosh.NewClient(bosh.Config{
+				URL:      server.URL,
+				Username: "some-username",
+				Password: "some-password",
+			})
+
+			taskOutputs, err := client.GetTaskOutput(fmt.Sprintf("%s/tasks/some-task-id", server.URL))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(taskOutputs).To(ConsistOf(
+				bosh.TaskOutput{
+					Time:     0,
+					Stage:    "some-stage",
+					Tags:     []string{"some-tag"},
+					Total:    1,
+					Task:     "some-task-guid",
+					Index:    1,
+					State:    "some-state",
+					Progress: 0,
+				},
+				bosh.TaskOutput{
+					Time:     1,
+					Stage:    "some-stage",
+					Tags:     []string{"some-tag"},
+					Total:    1,
+					Task:     "some-task-guid",
+					Index:    1,
+					State:    "some-new-state",
+					Progress: 0,
+				},
+			))
+		})
+
+		Context("failure cases", func() {
+			It("error on a malformed URL", func() {
+				client := bosh.NewClient(bosh.Config{
+					URL:      "%%%%%%%%",
+					Username: "some-username",
+					Password: "some-password",
+				})
+
+				_, err := client.GetTaskOutput(fmt.Sprintf("%s/tasks/some-task-id", "%%%%%%%"))
+				Expect(err).To(MatchError(ContainSubstring("invalid URL escape")))
+			})
+
+			It("error on an empty URL", func() {
+				client := bosh.NewClient(bosh.Config{
+					URL:      "",
+					Username: "some-username",
+					Password: "some-password",
+				})
+
+				_, err := client.GetTaskOutput(fmt.Sprintf("%s/tasks/some-task-id", ""))
+				Expect(err).To(MatchError(ContainSubstring("unsupported protocol")))
+			})
+
+			It("errors on an unexpected status code", func() {
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusBadGateway)
+				}))
+
+				client := bosh.NewClient(bosh.Config{
+					URL:      server.URL,
+					Username: "some-username",
+					Password: "some-password",
+				})
+
+				_, err := client.GetTaskOutput(fmt.Sprintf("%s/tasks/some-task-id", server.URL))
+				Expect(err).To(MatchError("unexpected response 502 Bad Gateway"))
+			})
+
+			It("should error on a bogus response body", func() {
+				client := bosh.NewClient(bosh.Config{
+					URL:      server.URL,
+					Username: "some-username",
+					Password: "some-password",
+				})
+
+				bosh.SetBodyReader(func(io.Reader) ([]byte, error) {
+					return nil, errors.New("a bad read happened")
+				})
+
+				_, err := client.GetTaskOutput(fmt.Sprintf("%s/tasks/some-task-id", server.URL))
+				Expect(err).To(MatchError("a bad read happened"))
+			})
+
+			It("error on malformed JSON", func() {
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.Write([]byte(`%%%%%%%%`))
+				}))
+
+				client := bosh.NewClient(bosh.Config{
+					URL:      server.URL,
+					Username: "some-username",
+					Password: "some-password",
+				})
+
+				_, err := client.GetTaskOutput(fmt.Sprintf("%s/tasks/some-task-id", server.URL))
+				Expect(err).To(MatchError(ContainSubstring("invalid character")))
+			})
+		})
+	})
+
 	Context("Deployments", func() {
 		It("retrieves all deployments from the director", func() {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

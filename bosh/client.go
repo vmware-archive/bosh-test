@@ -65,6 +65,26 @@ type Deployment struct {
 	Name string
 }
 
+type Task struct {
+	Id          string
+	State       string
+	Description string
+	Timestamp   time.Time
+	Result      string
+	User        string
+}
+
+type TaskOutput struct {
+	Time     int
+	Stage    string
+	Tags     []string
+	Total    int
+	Task     string
+	Index    int
+	State    string
+	Progress int
+}
+
 func NewClient(config Config) Client {
 	if config.TaskPollingInterval == time.Duration(0) {
 		config.TaskPollingInterval = 5 * time.Second
@@ -85,25 +105,69 @@ func NewClient(config Config) Client {
 	}
 }
 
-func (c Client) checkTask(location string) error {
-	var task struct {
-		State  string
-		Result string
+func (c Client) GetTaskOutput(location string) ([]TaskOutput, error) {
+	request, err := http.NewRequest("GET", fmt.Sprintf("%s/output?type=event", location), nil)
+	if err != nil {
+		return []TaskOutput{}, err
+	}
+	request.SetBasicAuth(c.config.Username, c.config.Password)
+
+	response, err := transport.RoundTrip(request)
+	if err != nil {
+		return []TaskOutput{}, err
 	}
 
+	if response.StatusCode != http.StatusOK {
+		return []TaskOutput{}, fmt.Errorf("unexpected response %d %s", response.StatusCode, http.StatusText(response.StatusCode))
+	}
+
+	body, err := bodyReader(response.Body)
+	if err != nil {
+		return []TaskOutput{}, err
+	}
+	defer response.Body.Close()
+
+	body = bytes.TrimSpace(body)
+	parts := bytes.Split(body, []byte("\n"))
+
+	var taskOutputs []TaskOutput
+	for _, part := range parts {
+		var taskOutput TaskOutput
+		err = json.Unmarshal(part, &taskOutput)
+		if err != nil {
+			return []TaskOutput{}, err
+		}
+
+		taskOutputs = append(taskOutputs, taskOutput)
+	}
+
+	return taskOutputs, nil
+}
+
+func (c Client) checkTask(location string) (Task, error) {
+	var task Task
+	request, err := http.NewRequest("GET", location, nil)
+	if err != nil {
+		return task, err
+	}
+	request.SetBasicAuth(c.config.Username, c.config.Password)
+
+	response, err := transport.RoundTrip(request)
+	if err != nil {
+		return task, err
+	}
+
+	err = json.NewDecoder(response.Body).Decode(&task)
+	if err != nil {
+		return task, err
+	}
+
+	return task, nil
+}
+
+func (c Client) checkTaskStatus(location string) error {
 	for {
-		request, err := http.NewRequest("GET", location, nil)
-		if err != nil {
-			return err
-		}
-		request.SetBasicAuth(c.config.Username, c.config.Password)
-
-		response, err := transport.RoundTrip(request)
-		if err != nil {
-			return err
-		}
-
-		err = json.NewDecoder(response.Body).Decode(&task)
+		task, err := c.checkTask(location)
 		if err != nil {
 			return err
 		}
@@ -218,7 +282,7 @@ func (c Client) DeploymentVMs(name string) ([]VM, error) {
 
 	location := response.Header.Get("Location")
 
-	err = c.checkTask(location)
+	err = c.checkTaskStatus(location)
 	if err != nil {
 		return []VM{}, err
 	}
@@ -298,7 +362,7 @@ func (c Client) Deploy(manifest []byte) error {
 		return fmt.Errorf("unexpected response %d %s", response.StatusCode, http.StatusText(response.StatusCode))
 	}
 
-	return c.checkTask(response.Header.Get("Location"))
+	return c.checkTaskStatus(response.Header.Get("Location"))
 }
 
 func (c Client) ScanAndFix(yaml []byte) error {
@@ -348,7 +412,7 @@ func (c Client) ScanAndFix(yaml []byte) error {
 		return fmt.Errorf("unexpected response %d %s", response.StatusCode, http.StatusText(response.StatusCode))
 	}
 
-	err = c.checkTask(response.Header.Get("Location"))
+	err = c.checkTaskStatus(response.Header.Get("Location"))
 	if err != nil {
 		return err
 	}
@@ -377,7 +441,7 @@ func (c Client) DeleteDeployment(name string) error {
 		return fmt.Errorf("unexpected response %d %s", response.StatusCode, http.StatusText(response.StatusCode))
 	}
 
-	return c.checkTask(response.Header.Get("Location"))
+	return c.checkTaskStatus(response.Header.Get("Location"))
 }
 
 func (c Client) ResolveManifestVersions(yaml []byte) ([]byte, error) {
