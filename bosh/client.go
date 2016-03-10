@@ -105,8 +105,8 @@ func NewClient(config Config) Client {
 	}
 }
 
-func (c Client) GetTaskOutput(location string) ([]TaskOutput, error) {
-	request, err := http.NewRequest("GET", fmt.Sprintf("%s/output?type=event", location), nil)
+func (c Client) GetTaskOutput(taskId int) ([]TaskOutput, error) {
+	request, err := http.NewRequest("GET", fmt.Sprintf("%s/tasks/%d/output?type=event", c.config.URL, taskId), nil)
 	if err != nil {
 		return []TaskOutput{}, err
 	}

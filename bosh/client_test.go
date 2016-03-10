@@ -22,7 +22,7 @@ var _ = Describe("client", func() {
 
 		BeforeEach(func() {
 			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				Expect(r.URL.Path).To(Equal("/tasks/some-task-id/output"))
+				Expect(r.URL.Path).To(Equal("/tasks/1/output"))
 				Expect(r.URL.RawQuery).To(Equal("type=event"))
 				Expect(r.Method).To(Equal("GET"))
 
@@ -40,7 +40,7 @@ var _ = Describe("client", func() {
 				Password: "some-password",
 			})
 
-			taskOutputs, err := client.GetTaskOutput(fmt.Sprintf("%s/tasks/some-task-id", server.URL))
+			taskOutputs, err := client.GetTaskOutput(1)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(taskOutputs).To(ConsistOf(
 				bosh.TaskOutput{
@@ -74,7 +74,7 @@ var _ = Describe("client", func() {
 					Password: "some-password",
 				})
 
-				_, err := client.GetTaskOutput(fmt.Sprintf("%s/tasks/some-task-id", "%%%%%%%"))
+				_, err := client.GetTaskOutput(1)
 				Expect(err).To(MatchError(ContainSubstring("invalid URL escape")))
 			})
 
@@ -85,7 +85,7 @@ var _ = Describe("client", func() {
 					Password: "some-password",
 				})
 
-				_, err := client.GetTaskOutput(fmt.Sprintf("%s/tasks/some-task-id", ""))
+				_, err := client.GetTaskOutput(1)
 				Expect(err).To(MatchError(ContainSubstring("unsupported protocol")))
 			})
 
@@ -100,7 +100,7 @@ var _ = Describe("client", func() {
 					Password: "some-password",
 				})
 
-				_, err := client.GetTaskOutput(fmt.Sprintf("%s/tasks/some-task-id", server.URL))
+				_, err := client.GetTaskOutput(1)
 				Expect(err).To(MatchError("unexpected response 502 Bad Gateway"))
 			})
 
@@ -115,7 +115,7 @@ var _ = Describe("client", func() {
 					return nil, errors.New("a bad read happened")
 				})
 
-				_, err := client.GetTaskOutput(fmt.Sprintf("%s/tasks/some-task-id", server.URL))
+				_, err := client.GetTaskOutput(1)
 				Expect(err).To(MatchError("a bad read happened"))
 			})
 
@@ -130,7 +130,7 @@ var _ = Describe("client", func() {
 					Password: "some-password",
 				})
 
-				_, err := client.GetTaskOutput(fmt.Sprintf("%s/tasks/some-task-id", server.URL))
+				_, err := client.GetTaskOutput(1)
 				Expect(err).To(MatchError(ContainSubstring("invalid character")))
 			})
 		})
