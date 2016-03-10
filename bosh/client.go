@@ -66,12 +66,9 @@ type Deployment struct {
 }
 
 type Task struct {
-	Id          int
-	State       string
-	Description string
-	Timestamp   time.Time
-	Result      string
-	User        string
+	Id     int
+	State  string
+	Result string
 }
 
 type TaskOutput struct {
