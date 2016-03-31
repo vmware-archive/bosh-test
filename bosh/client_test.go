@@ -332,7 +332,7 @@ jobs:
 				})
 
 				err := client.ScanAndFix([]byte("---\njobs: []"))
-				Expect(err).To(MatchError(ContainSubstring("percent-encoded characters")))
+				Expect(err).To(MatchError(ContainSubstring("invalid URL escape")))
 			})
 
 			It("errors when the redirect location is bad", func() {
@@ -1146,7 +1146,7 @@ jobs:
 				})
 
 				_, err := client.DeploymentVMs("some-deployment-name")
-				Expect(err).To(MatchError(ContainSubstring("percent-encoded characters in host")))
+				Expect(err).To(MatchError(ContainSubstring("invalid URL escape")))
 			})
 
 			It("errors when the protocol scheme is invalid", func() {
@@ -1211,7 +1211,7 @@ jobs:
 				})
 
 				_, err := client.DeploymentVMs("some-deployment-name")
-				Expect(err).To(MatchError(ContainSubstring("percent-encoded characters in host")))
+				Expect(err).To(MatchError(ContainSubstring("invalid URL escape")))
 			})
 
 			It("errors when the redirect URL protocol scheme is unsupported", func() {
