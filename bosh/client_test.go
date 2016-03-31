@@ -690,7 +690,6 @@ jobs:
 		})
 
 		Context("failure cases", func() {
-
 			It("should error if the name is empty", func() {
 				client := bosh.NewClient(bosh.Config{
 					TaskPollingInterval: time.Nanosecond,
@@ -1097,9 +1096,11 @@ jobs:
 					Expect(r.URL.RawQuery).To(Equal("type=result"))
 					Expect(taskCallCount).NotTo(Equal(0))
 
-					w.Write([]byte(`{"job_state":"some-state"}
-						{"job_state":"some-other-state"}
-						{"job_state":"some-more-state"}
+					w.Write([]byte(`
+						{"index": 0, "job_name": "consul_z1", "job_state":"some-state"}
+						{"index": 0, "job_name": "etcd_z1", "job_state":"some-state"}
+						{"index": 1, "job_name": "etcd_z1", "job_state":"some-other-state"}
+						{"index": 2, "job_name": "etcd_z1", "job_state":"some-more-state"}
 					`))
 				default:
 					Fail("unknown route")
@@ -1116,13 +1117,24 @@ jobs:
 			Expect(err).NotTo(HaveOccurred())
 			Expect(vms).To(ConsistOf([]bosh.VM{
 				{
-					State: "some-state",
+					Index:   0,
+					JobName: "consul_z1",
+					State:   "some-state",
 				},
 				{
-					State: "some-other-state",
+					Index:   0,
+					JobName: "etcd_z1",
+					State:   "some-state",
 				},
 				{
-					State: "some-more-state",
+					Index:   1,
+					JobName: "etcd_z1",
+					State:   "some-other-state",
+				},
+				{
+					Index:   2,
+					JobName: "etcd_z1",
+					State:   "some-more-state",
 				},
 			}))
 		})

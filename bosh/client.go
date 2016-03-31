@@ -258,7 +258,9 @@ func (c Client) Release(name string) (Release, error) {
 }
 
 type VM struct {
-	State string `json:"job_state"`
+	Index   int    `json:"index"`
+	State   string `json:"job_state"`
+	JobName string `json:"job_name"`
 }
 
 func (c Client) DeploymentVMs(name string) ([]VM, error) {
