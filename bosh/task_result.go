@@ -18,7 +18,7 @@ func (c Client) TaskResult(taskId int) (map[string]interface{}, error) {
 		return nil, err
 	}
 
-	if response.StatusCode != http.StatusPartialContent {
+	if response.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected response %s", response.Status)
 	}
 

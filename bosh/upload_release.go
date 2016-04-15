@@ -6,13 +6,36 @@ import (
 	"net/http"
 )
 
-func (c Client) UploadRelease(ioReader io.Reader) (int, error) {
-	request, err := http.NewRequest("POST", fmt.Sprintf("%s/releases", c.config.URL), ioReader)
+type SizeReader interface{
+	io.Reader
+	Size() int64
+}
+
+func NewSizeReader(reader io.Reader, size int64) SizeReader {
+	return sizeReader{
+		Reader: reader,
+		size: size,
+	}
+}
+
+type sizeReader struct{
+	io.Reader
+	size int64
+}
+
+func (r sizeReader) Size() int64 {
+	return r.size
+}
+
+func (c Client) UploadRelease(contents SizeReader) (int, error) {
+	request, err := http.NewRequest("POST", fmt.Sprintf("%s/releases", c.config.URL), contents)
 	if err != nil {
 		return 0, err
 	}
 
 	request.SetBasicAuth(c.config.Username, c.config.Password)
+	request.Header.Set("Content-Type", "application/x-compressed")
+	request.ContentLength = contents.Size()
 
 	response, err := transport.RoundTrip(request)
 	if err != nil {

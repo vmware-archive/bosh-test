@@ -2,6 +2,7 @@ package bosh_test
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +13,22 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
+
+func NewSizeReader(reader io.Reader, size int64) sizeReader {
+	return sizeReader{
+		Reader: reader,
+		size: size,
+	}
+}
+
+type sizeReader struct{
+	io.Reader
+	size int64
+}
+
+func (r sizeReader) Size() int64 {
+	return r.size
+}
 
 var _ = Describe("UploadRelease", func() {
 	var server *httptest.Server
@@ -25,6 +42,8 @@ var _ = Describe("UploadRelease", func() {
 				Expect(ok).To(BeTrue())
 				Expect(username).To(Equal("some-username"))
 				Expect(password).To(Equal("some-password"))
+				Expect(req.Header.Get("Content-Type")).To(Equal("application/x-compressed"))
+				Expect(req.ContentLength).To(BeNumerically("==", len("I am a banana!")))
 
 				contents, err := ioutil.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
@@ -55,7 +74,8 @@ var _ = Describe("UploadRelease", func() {
 			Password: "some-password",
 		})
 
-		taskID, err := client.UploadRelease(strings.NewReader("I am a banana!"))
+		reader := strings.NewReader("I am a banana!")
+		taskID, err := client.UploadRelease(NewSizeReader(reader, reader.Size()))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(taskID).To(Equal(2))
 	})

@@ -25,6 +25,8 @@ var _ = Describe("ExportRelease", func() {
 				Expect(username).To(Equal("some-username"))
 				Expect(password).To(Equal("some-password"))
 
+				Expect(req.Header.Get("Content-Type")).To(Equal("application/json"))
+
 				var release map[string]interface{}
 				err := json.NewDecoder(req.Body).Decode(&release)
 				Expect(err).NotTo(HaveOccurred())
@@ -56,7 +58,6 @@ var _ = Describe("ExportRelease", func() {
 				Expect(username).To(Equal("some-username"))
 				Expect(password).To(Equal("some-password"))
 
-				w.WriteHeader(http.StatusPartialContent)
 				w.Write([]byte(`{"blobstore_id": "some-resource-id"}`))
 
 			default:
@@ -170,7 +171,6 @@ var _ = Describe("ExportRelease", func() {
 						w.Write([]byte(`{"id": 5, "state": "done"}`))
 
 					case "/tasks/5/output":
-						w.WriteHeader(http.StatusPartialContent)
 						w.Write([]byte("{}"))
 
 					default:

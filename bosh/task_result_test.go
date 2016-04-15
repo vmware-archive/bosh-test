@@ -25,7 +25,6 @@ var _ = Describe("TaskResult", func() {
 			Expect(username).To(Equal("some-username"))
 			Expect(password).To(Equal("some-password"))
 
-			w.WriteHeader(http.StatusPartialContent)
 			w.Write([]byte(`{
 				"blobstore_id": "some-guid",
 				"sha1": "some-sha1"
@@ -106,7 +105,6 @@ var _ = Describe("TaskResult", func() {
 		Context("when the response body cannot be unmarshalled", func() {
 			It("returns an error", func() {
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					w.WriteHeader(http.StatusPartialContent)
 					w.Write([]byte(`%%%`))
 				}))
 

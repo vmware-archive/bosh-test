@@ -2,17 +2,18 @@ package bosh
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 )
 
-func (c Client) UploadStemcell(reader io.Reader) (int, error) {
-	request, err := http.NewRequest("POST", fmt.Sprintf("%s/stemcells", c.config.URL), reader)
+func (c Client) UploadStemcell(contents SizeReader) (int, error) {
+	request, err := http.NewRequest("POST", fmt.Sprintf("%s/stemcells", c.config.URL), contents)
 	if err != nil {
 		return 0, err
 	}
 
 	request.SetBasicAuth(c.config.Username, c.config.Password)
+	request.Header.Set("Content-Type", "application/x-compressed")
+	request.ContentLength = contents.Size()
 
 	response, err := transport.RoundTrip(request)
 	if err != nil {

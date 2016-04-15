@@ -24,6 +24,8 @@ var _ = Describe("UploadStemcell", func() {
 				Expect(ok).To(BeTrue())
 				Expect(username).To(Equal("some-user"))
 				Expect(password).To(Equal("some-password"))
+				Expect(req.Header.Get("Content-Type")).To(Equal("application/x-compressed"))
+				Expect(req.ContentLength).To(BeNumerically("==", len("I am an apple")))
 
 				contents, err := ioutil.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
@@ -54,7 +56,7 @@ var _ = Describe("UploadStemcell", func() {
 			Password: "some-password",
 		})
 
-		taskID, err := client.UploadStemcell(strings.NewReader("I am an apple"))
+		taskID, err := client.UploadStemcell(sizeReader{strings.NewReader("I am an apple"), int64(len("I am an apple"))})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(taskID).To(Equal(8))
 	})
