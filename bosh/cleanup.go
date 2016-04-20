@@ -14,6 +14,7 @@ func (c Client) Cleanup() (int, error) {
 	}
 
 	request.SetBasicAuth(c.config.Username, c.config.Password)
+	request.Header.Set("Content-Type", "application/json")
 
 	response, err := transport.RoundTrip(request)
 	if err != nil {

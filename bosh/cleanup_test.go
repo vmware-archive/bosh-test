@@ -24,6 +24,7 @@ var _ = Describe("Cleanup", func() {
 				Expect(ok).To(BeTrue())
 				Expect(username).To(Equal("some-username"))
 				Expect(password).To(Equal("some-password"))
+				Expect(req.Header.Get("Content-Type")).To(Equal("application/json"))
 
 				var contents map[string]interface{}
 				err := json.NewDecoder(req.Body).Decode(&contents)
