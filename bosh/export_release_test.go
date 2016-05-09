@@ -111,6 +111,7 @@ var _ = Describe("ExportRelease", func() {
 		Context("when the task status request fails", func() {
 			It("returns an error", func() {
 				server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+					w.Header().Set("Location", "%%%%")
 					w.WriteHeader(http.StatusFound)
 				}))
 
@@ -123,7 +124,7 @@ var _ = Describe("ExportRelease", func() {
 				_, err := client.ExportRelease("some-deployment-name",
 					"some-release-name", "some-release-version",
 					"some-stemcell-name", "some-stemcell-version")
-				Expect(err).To(MatchError(ContainSubstring("unsupported protocol scheme")))
+				Expect(err).To(MatchError(ContainSubstring("invalid URL escape")))
 			})
 		})
 
