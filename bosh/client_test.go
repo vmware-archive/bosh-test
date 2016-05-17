@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"time"
 
 	"github.com/pivotal-cf-experimental/bosh-test/bosh"
@@ -1086,7 +1088,16 @@ jobs:
 				switch r.URL.Path {
 				case "/deployments/some-deployment-name/vms":
 					Expect(r.URL.RawQuery).To(Equal("format=full"))
-					w.Header().Set("Location", fmt.Sprintf("http://%s/tasks/1", r.Host))
+					host, _, err := net.SplitHostPort(r.Host)
+					Expect(err).NotTo(HaveOccurred())
+
+					location := &url.URL{
+						Scheme: "http",
+						Host:   host,
+						Path:   "/tasks/1",
+					}
+
+					w.Header().Set("Location", location.String())
 					w.WriteHeader(http.StatusFound)
 				case "/tasks/1":
 					w.WriteHeader(http.StatusAccepted)
@@ -1212,23 +1223,6 @@ jobs:
 
 				_, err := client.DeploymentVMs("some-deployment-name")
 				Expect(err).To(MatchError(ContainSubstring("invalid URL escape")))
-			})
-
-			It("errors when the redirect URL protocol scheme is unsupported", func() {
-				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					Expect(r.URL.Path).To(Equal("/deployments/some-deployment-name/vms"))
-					w.Header().Set("Location", "banana://example.com/tasks/1")
-					w.WriteHeader(http.StatusFound)
-				}))
-
-				client := bosh.NewClient(bosh.Config{
-					URL:      server.URL,
-					Username: "some-username",
-					Password: "some-password",
-				})
-
-				_, err := client.DeploymentVMs("some-deployment-name")
-				Expect(err).To(MatchError(ContainSubstring("unsupported protocol")))
 			})
 
 			It("should error on malformed JSON", func() {

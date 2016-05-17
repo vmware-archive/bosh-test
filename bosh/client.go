@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/cloudfoundry-incubator/candiedyaml"
@@ -141,7 +142,24 @@ func (c Client) GetTaskOutput(taskId int) ([]TaskOutput, error) {
 	return taskOutputs, nil
 }
 
+func (c Client) rewriteURL(uri string) (string, error) {
+	parsedURL, err := url.Parse(uri)
+	if err != nil {
+		return "", err
+	}
+
+	parsedURL.Scheme = ""
+	parsedURL.Host = ""
+
+	return c.config.URL + parsedURL.String(), nil
+}
+
 func (c Client) checkTask(location string) (Task, error) {
+	location, err := c.rewriteURL(location)
+	if err != nil {
+		return Task{}, err
+	}
+
 	var task Task
 	request, err := http.NewRequest("GET", location, nil)
 	if err != nil {
@@ -282,6 +300,11 @@ func (c Client) DeploymentVMs(name string) ([]VM, error) {
 	location := response.Header.Get("Location")
 
 	_, err = c.checkTaskStatus(location)
+	if err != nil {
+		return []VM{}, err
+	}
+
+	location, err = c.rewriteURL(location)
 	if err != nil {
 		return []VM{}, err
 	}
