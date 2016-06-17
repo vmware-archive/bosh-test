@@ -12,10 +12,10 @@ import (
 	"time"
 
 	"github.com/pivotal-cf-experimental/bosh-test/bosh"
+	"github.com/pivotal-cf-experimental/gomegamatchers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/pivotal-cf-experimental/gomegamatchers"
 )
 
 var _ = Describe("client", func() {
@@ -1425,7 +1425,7 @@ releases:
 
 			resolvedManifest, err := client.ResolveManifestVersions([]byte(manifest))
 			Expect(err).NotTo(HaveOccurred())
-			Expect(resolvedManifest).To(MatchYAML(`---
+			Expect(resolvedManifest).To(gomegamatchers.MatchYAML(`---
 director_uuid: some-director-uuid
 name: some-name
 compilation: some-compilation-value
