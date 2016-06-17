@@ -29,8 +29,8 @@ var _ = Describe("client", func() {
 				Expect(r.Method).To(Equal("GET"))
 
 				w.Write([]byte(`
-{"time": 0, "stage": "some-stage", "tags": [ "some-tag" ], "total": 1, "task": "some-task-guid", "index": 1, "state": "some-state", "progress": 0}
-{"time": 1, "stage": "some-stage", "tags": [ "some-tag" ], "total": 1, "task": "some-task-guid", "index": 1, "state": "some-new-state", "progress": 0}
+{"time": 0, "error": "some-error", "stage": "some-stage", "tags": [ "some-tag" ], "total": 1, "task": "some-task-guid", "index": 1, "state": "some-state", "progress": 0}
+{"time": 1, "error": "some-error", "stage": "some-stage", "tags": [ "some-tag" ], "total": 1, "task": "some-task-guid", "index": 1, "state": "some-new-state", "progress": 0}
 				`))
 			}))
 		})
@@ -47,6 +47,7 @@ var _ = Describe("client", func() {
 			Expect(taskOutputs).To(ConsistOf(
 				bosh.TaskOutput{
 					Time:     0,
+					Error:    "some-error",
 					Stage:    "some-stage",
 					Tags:     []string{"some-tag"},
 					Total:    1,
@@ -57,6 +58,7 @@ var _ = Describe("client", func() {
 				},
 				bosh.TaskOutput{
 					Time:     1,
+					Error:    "some-error",
 					Stage:    "some-stage",
 					Tags:     []string{"some-tag"},
 					Total:    1,
@@ -726,14 +728,21 @@ jobs:
 				Expect(err).To(MatchError("unexpected response 400 Bad Request"))
 			})
 
-			It("should error on an error task status", func() {
+			It("should error on an errored task status", func() {
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					switch r.URL.Path {
 					case "/deployments/some-deployment-name":
 						w.Header().Set("Location", fmt.Sprintf("http://%s/tasks/1", r.Host))
 						w.WriteHeader(http.StatusFound)
 					case "/tasks/1":
-						w.Write([]byte(`{"state": "errored", "result": "some-error-message"}`))
+						w.Write([]byte(`{"Id": 1, "state": "errored", "result": "some-error-message"}`))
+					case "/tasks/1/output":
+						if r.URL.RawQuery == "type=event" {
+							w.Write([]byte(`
+								{"state": "some-state"}
+								{"error": "some-better-error-message"}
+							`))
+						}
 					default:
 						Fail("could not match any URL endpoints")
 					}
@@ -747,7 +756,7 @@ jobs:
 				})
 
 				err := client.DeleteDeployment("some-deployment-name")
-				Expect(err).To(MatchError(errors.New("bosh task failed with an errored status \"some-error-message\"")))
+				Expect(err).To(MatchError(errors.New("bosh task failed with an errored status \"some-better-error-message\"")))
 			})
 
 			It("should error on an error task status", func() {
@@ -757,7 +766,14 @@ jobs:
 						w.Header().Set("Location", fmt.Sprintf("http://%s/tasks/1", r.Host))
 						w.WriteHeader(http.StatusFound)
 					case "/tasks/1":
-						w.Write([]byte(`{"state": "error", "result": "some-error-message"}`))
+						w.Write([]byte(`{"Id": 1, "state": "error", "result": "some-error-message"}`))
+					case "/tasks/1/output":
+						if r.URL.RawQuery == "type=event" {
+							w.Write([]byte(`
+								{"state": "some-state"}
+								{"error": "some-better-error-message"}
+							`))
+						}
 					default:
 						Fail("could not match any URL endpoints")
 					}
@@ -771,7 +787,7 @@ jobs:
 				})
 
 				err := client.DeleteDeployment("some-deployment-name")
-				Expect(err).To(MatchError(errors.New("bosh task failed with an error status \"some-error-message\"")))
+				Expect(err).To(MatchError(errors.New("bosh task failed with an error status \"some-better-error-message\"")))
 			})
 
 			It("should error on a cancelled task status", func() {
@@ -944,7 +960,42 @@ jobs:
 						w.Header().Set("Location", fmt.Sprintf("http://%s/tasks/1", r.Host))
 						w.WriteHeader(http.StatusFound)
 					case "/tasks/1":
-						w.Write([]byte(`{"state": "error", "result": "some-error-message"}`))
+						w.Write([]byte(`{"Id": 1, "state": "error", "result": "some-error-message"}`))
+					case "/tasks/1/output":
+						if r.URL.RawQuery == "type=event" {
+							w.Write([]byte(`
+								{"state": "some-state"}
+								{"error": "some-better-error-message"}
+							`))
+						}
+					default:
+						Fail("could not match any URL endpoints")
+					}
+				}))
+
+				client := bosh.NewClient(bosh.Config{
+					URL:                 server.URL,
+					Username:            "some-username",
+					Password:            "some-password",
+					TaskPollingInterval: time.Nanosecond,
+				})
+
+				_, err := client.Deploy([]byte("some-yaml"))
+				Expect(err).To(MatchError(errors.New("bosh task failed with an error status \"some-better-error-message\"")))
+			})
+
+			It("return result error if events error fails", func() {
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					switch r.URL.Path {
+					case "/deployments":
+						w.Header().Set("Location", fmt.Sprintf("http://%s/tasks/1", r.Host))
+						w.WriteHeader(http.StatusFound)
+					case "/tasks/1":
+						w.Write([]byte(`{"Id": 1, "state": "error", "result": "some-error-message"}`))
+					case "/tasks/1/output":
+						if r.URL.RawQuery == "type=event" {
+							w.WriteHeader(http.StatusInternalServerError)
+						}
 					default:
 						Fail("could not match any URL endpoints")
 					}
@@ -968,7 +1019,11 @@ jobs:
 						w.Header().Set("Location", fmt.Sprintf("http://%s/tasks/1", r.Host))
 						w.WriteHeader(http.StatusFound)
 					case "/tasks/1":
-						w.Write([]byte(`{"state": "errored", "result": "some-error-message"}`))
+						w.Write([]byte(`{"Id": 1, "state": "errored", "result": "some-error-message"}`))
+					case "/tasks/1/output":
+						if r.URL.RawQuery == "type=event" {
+							w.WriteHeader(http.StatusInternalServerError)
+						}
 					default:
 						Fail("could not match any URL endpoints")
 					}
@@ -983,6 +1038,37 @@ jobs:
 
 				_, err := client.Deploy([]byte("some-yaml"))
 				Expect(err).To(MatchError(errors.New("bosh task failed with an errored status \"some-error-message\"")))
+			})
+
+			It("should error on a errored task status", func() {
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					switch r.URL.Path {
+					case "/deployments":
+						w.Header().Set("Location", fmt.Sprintf("http://%s/tasks/1", r.Host))
+						w.WriteHeader(http.StatusFound)
+					case "/tasks/1":
+						w.Write([]byte(`{"Id": 1, "state": "errored", "result": "some-error-message"}`))
+					case "/tasks/1/output":
+						if r.URL.RawQuery == "type=event" {
+							w.Write([]byte(`
+								{"state": "some-state"}
+								{"error": "some-better-error-message"}
+							`))
+						}
+					default:
+						Fail("could not match any URL endpoints")
+					}
+				}))
+
+				client := bosh.NewClient(bosh.Config{
+					URL:                 server.URL,
+					Username:            "some-username",
+					Password:            "some-password",
+					TaskPollingInterval: time.Nanosecond,
+				})
+
+				_, err := client.Deploy([]byte("some-yaml"))
+				Expect(err).To(MatchError(errors.New("bosh task failed with an errored status \"some-better-error-message\"")))
 			})
 
 			It("should error on a cancelled task status", func() {

@@ -74,6 +74,7 @@ type Task struct {
 
 type TaskOutput struct {
 	Time     int64
+	Error    string
 	Stage    string
 	Tags     []string
 	Total    int
@@ -191,9 +192,19 @@ func (c Client) checkTaskStatus(location string) (int, error) {
 		case "done":
 			return task.Id, nil
 		case "error":
-			return task.Id, fmt.Errorf("bosh task failed with an error status %q", task.Result)
+			taskOutputs, err := c.GetTaskOutput(task.Id)
+			if err != nil {
+				return task.Id, fmt.Errorf("bosh task failed with an error status %q", task.Result)
+			}
+			errorMessage := taskOutputs[len(taskOutputs)-1].Error
+			return task.Id, fmt.Errorf("bosh task failed with an error status %q", errorMessage)
 		case "errored":
-			return task.Id, fmt.Errorf("bosh task failed with an errored status %q", task.Result)
+			taskOutputs, err := c.GetTaskOutput(task.Id)
+			if err != nil {
+				return task.Id, fmt.Errorf("bosh task failed with an errored status %q", task.Result)
+			}
+			errorMessage := taskOutputs[len(taskOutputs)-1].Error
+			return task.Id, fmt.Errorf("bosh task failed with an errored status %q", errorMessage)
 		case "cancelled":
 			return task.Id, errors.New("bosh task was cancelled")
 		default:
