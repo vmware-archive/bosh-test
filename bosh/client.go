@@ -74,7 +74,7 @@ type Task struct {
 
 type TaskOutput struct {
 	Time     int64
-	Error    string
+	Error    TaskError
 	Stage    string
 	Tags     []string
 	Total    int
@@ -82,6 +82,11 @@ type TaskOutput struct {
 	Index    int
 	State    string
 	Progress int
+}
+
+type TaskError struct {
+	Code    int
+	Message string
 }
 
 func NewClient(config Config) Client {
@@ -194,16 +199,16 @@ func (c Client) checkTaskStatus(location string) (int, error) {
 		case "error":
 			taskOutputs, err := c.GetTaskOutput(task.Id)
 			if err != nil {
-				return task.Id, fmt.Errorf("bosh task failed with an error status %q", task.Result)
+				return task.Id, fmt.Errorf("failed to get full bosh task event log, bosh task failed with an error status %q", task.Result)
 			}
-			errorMessage := taskOutputs[len(taskOutputs)-1].Error
+			errorMessage := taskOutputs[len(taskOutputs)-1].Error.Message
 			return task.Id, fmt.Errorf("bosh task failed with an error status %q", errorMessage)
 		case "errored":
 			taskOutputs, err := c.GetTaskOutput(task.Id)
 			if err != nil {
-				return task.Id, fmt.Errorf("bosh task failed with an errored status %q", task.Result)
+				return task.Id, fmt.Errorf("failed to get full bosh task event log, bosh task failed with an errored status %q", task.Result)
 			}
-			errorMessage := taskOutputs[len(taskOutputs)-1].Error
+			errorMessage := taskOutputs[len(taskOutputs)-1].Error.Message
 			return task.Id, fmt.Errorf("bosh task failed with an errored status %q", errorMessage)
 		case "cancelled":
 			return task.Id, errors.New("bosh task was cancelled")

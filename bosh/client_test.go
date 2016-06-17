@@ -29,8 +29,8 @@ var _ = Describe("client", func() {
 				Expect(r.Method).To(Equal("GET"))
 
 				w.Write([]byte(`
-{"time": 0, "error": "some-error", "stage": "some-stage", "tags": [ "some-tag" ], "total": 1, "task": "some-task-guid", "index": 1, "state": "some-state", "progress": 0}
-{"time": 1, "error": "some-error", "stage": "some-stage", "tags": [ "some-tag" ], "total": 1, "task": "some-task-guid", "index": 1, "state": "some-new-state", "progress": 0}
+				{"time": 0, "error": {"code": 100, "message": "some-error" }, "stage": "some-stage", "tags": [ "some-tag" ], "total": 1, "task": "some-task-guid", "index": 1, "state": "some-state", "progress": 0}
+{"time": 1, "error": {"code": 100, "message": "some-error" }, "stage": "some-stage", "tags": [ "some-tag" ], "total": 1, "task": "some-task-guid", "index": 1, "state": "some-new-state", "progress": 0}
 				`))
 			}))
 		})
@@ -46,8 +46,11 @@ var _ = Describe("client", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(taskOutputs).To(ConsistOf(
 				bosh.TaskOutput{
-					Time:     0,
-					Error:    "some-error",
+					Time: 0,
+					Error: bosh.TaskError{
+						Code:    100,
+						Message: "some-error",
+					},
 					Stage:    "some-stage",
 					Tags:     []string{"some-tag"},
 					Total:    1,
@@ -57,8 +60,11 @@ var _ = Describe("client", func() {
 					Progress: 0,
 				},
 				bosh.TaskOutput{
-					Time:     1,
-					Error:    "some-error",
+					Time: 1,
+					Error: bosh.TaskError{
+						Code:    100,
+						Message: "some-error",
+					},
 					Stage:    "some-stage",
 					Tags:     []string{"some-tag"},
 					Total:    1,
@@ -740,7 +746,7 @@ jobs:
 						if r.URL.RawQuery == "type=event" {
 							w.Write([]byte(`
 								{"state": "some-state"}
-								{"error": "some-better-error-message"}
+								{"error": {"code": 100, "message": "some-better-error-message"}}
 							`))
 						}
 					default:
@@ -771,7 +777,7 @@ jobs:
 						if r.URL.RawQuery == "type=event" {
 							w.Write([]byte(`
 								{"state": "some-state"}
-								{"error": "some-better-error-message"}
+								{"error": {"code": 100, "message": "some-better-error-message"}}
 							`))
 						}
 					default:
@@ -965,7 +971,7 @@ jobs:
 						if r.URL.RawQuery == "type=event" {
 							w.Write([]byte(`
 								{"state": "some-state"}
-								{"error": "some-better-error-message"}
+								{"error": {"code": 100, "message": "some-better-error-message"}}
 							`))
 						}
 					default:
@@ -1009,7 +1015,7 @@ jobs:
 				})
 
 				_, err := client.Deploy([]byte("some-yaml"))
-				Expect(err).To(MatchError(errors.New("bosh task failed with an error status \"some-error-message\"")))
+				Expect(err).To(MatchError(errors.New("failed to get full bosh task event log, bosh task failed with an error status \"some-error-message\"")))
 			})
 
 			It("should error on a errored task status", func() {
@@ -1037,7 +1043,7 @@ jobs:
 				})
 
 				_, err := client.Deploy([]byte("some-yaml"))
-				Expect(err).To(MatchError(errors.New("bosh task failed with an errored status \"some-error-message\"")))
+				Expect(err).To(MatchError(errors.New("failed to get full bosh task event log, bosh task failed with an errored status \"some-error-message\"")))
 			})
 
 			It("should error on a errored task status", func() {
@@ -1052,7 +1058,7 @@ jobs:
 						if r.URL.RawQuery == "type=event" {
 							w.Write([]byte(`
 								{"state": "some-state"}
-								{"error": "some-better-error-message"}
+								{"error": {"code": 100, "message": "some-better-error-message"}}
 							`))
 						}
 					default:
