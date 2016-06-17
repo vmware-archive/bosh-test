@@ -507,7 +507,10 @@ func (c Client) ResolveManifestVersions(yaml []byte) ([]byte, error) {
 			if err != nil {
 				return nil, err
 			}
-			pool.Stemcell.Version = stemcell.Latest()
+			pool.Stemcell.Version, err = stemcell.Latest()
+			if err != nil {
+				return nil, err
+			}
 			m.ResourcePools[i] = pool
 		}
 	}

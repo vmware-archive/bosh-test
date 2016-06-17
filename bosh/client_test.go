@@ -1474,6 +1474,7 @@ releases:
 					Expect(err).To(MatchError(ContainSubstring("yaml: ")))
 				})
 			})
+
 			Context("when the stemcell API causes an error", func() {
 				It("returns an error", func() {
 					server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -1497,6 +1498,40 @@ resource_pools:
 
 					_, err := client.ResolveManifestVersions([]byte(manifest))
 					Expect(err).To(MatchError("stemcell some-other-stemcell-name could not be found"))
+				})
+			})
+
+			Context("when the stemcell cannot resolve the latest", func() {
+				It("returns an error", func() {
+					server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						Expect(r.URL.Path).To(Equal("/stemcells"))
+						Expect(r.Method).To(Equal("GET"))
+
+						username, password, ok := r.BasicAuth()
+						Expect(ok).To(BeTrue())
+						Expect(username).To(Equal("some-username"))
+						Expect(password).To(Equal("some-password"))
+
+						w.Write([]byte(`[]`))
+
+					}))
+
+					client := bosh.NewClient(bosh.Config{
+						URL:      server.URL,
+						Username: "some-username",
+						Password: "some-password",
+					})
+					manifest := `---
+resource_pools:
+- name: some-resource-pool
+  network: some-network
+  stemcell:
+    name: "some-other-stemcell-name"
+    version: latest
+`
+
+					_, err := client.ResolveManifestVersions([]byte(manifest))
+					Expect(err).To(MatchError("no stemcell versions found, cannot get latest"))
 				})
 			})
 

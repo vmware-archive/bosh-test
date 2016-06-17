@@ -18,9 +18,17 @@ var _ = Describe("Stemcell", func() {
 				"3126",
 			}
 
-			Expect(stemcell.Latest()).To(Equal("3147"))
+			version, err := stemcell.Latest()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(version).To(Equal("3147"))
 		})
 
-		PIt("should handle no installed stemcells", func() {})
+		It("should handle no installed stemcells", func() {
+			stemcell := bosh.NewStemcell()
+			stemcell.Versions = []string{}
+
+			_, err := stemcell.Latest()
+			Expect(err).To(MatchError("no stemcell versions found, cannot get latest"))
+		})
 	})
 })
