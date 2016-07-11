@@ -11,7 +11,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/cloudfoundry-incubator/candiedyaml"
+	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -403,7 +403,7 @@ func (c Client) Deploy(manifest []byte) (int, error) {
 	return c.checkTaskStatus(response.Header.Get("Location"))
 }
 
-func (c Client) ScanAndFix(yaml []byte) error {
+func (c Client) ScanAndFix(manifestYAML []byte) error {
 	var manifest struct {
 		Name string
 		Jobs []struct {
@@ -411,7 +411,7 @@ func (c Client) ScanAndFix(yaml []byte) error {
 			Instances int
 		}
 	}
-	err := candiedyaml.Unmarshal(yaml, &manifest)
+	err := yaml.Unmarshal(manifestYAML, &manifest)
 	if err != nil {
 		return err
 	}
@@ -483,9 +483,9 @@ func (c Client) DeleteDeployment(name string) error {
 	return err
 }
 
-func (c Client) ResolveManifestVersions(yaml []byte) ([]byte, error) {
+func (c Client) ResolveManifestVersions(manifestYAML []byte) ([]byte, error) {
 	m := manifest{}
-	err := candiedyaml.Unmarshal(yaml, &m)
+	err := yaml.Unmarshal(manifestYAML, &m)
 	if err != nil {
 		return nil, err
 	}
@@ -515,7 +515,7 @@ func (c Client) ResolveManifestVersions(yaml []byte) ([]byte, error) {
 		}
 	}
 
-	return candiedyaml.Marshal(m)
+	return yaml.Marshal(m)
 }
 
 func (c Client) Deployments() ([]Deployment, error) {
