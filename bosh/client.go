@@ -542,3 +542,24 @@ func (c Client) Deployments() ([]Deployment, error) {
 
 	return deployments, nil
 }
+
+func (c Client) UpdateCloudConfig(cloudConfig []byte) error {
+	request, err := http.NewRequest("POST", fmt.Sprintf("%s/cloud_configs", c.config.URL), bytes.NewBuffer(cloudConfig))
+	if err != nil {
+		return err
+	}
+
+	request.SetBasicAuth(c.config.Username, c.config.Password)
+	request.Header.Set("Content-Type", "text/yaml")
+
+	response, err := transport.RoundTrip(request)
+	if err != nil {
+		return err
+	}
+
+	if response.StatusCode != http.StatusCreated {
+		return fmt.Errorf("unexpected response %d %s", response.StatusCode, http.StatusText(response.StatusCode))
+	}
+
+	return nil
+}

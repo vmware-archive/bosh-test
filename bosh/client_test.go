@@ -1561,4 +1561,79 @@ releases:
 			})
 		})
 	})
+
+	Describe("UpdateCloudConfig", func() {
+		It("updates cloud config", func() {
+			testServerCallCount := 0
+			cloudConfig := "some-cloud-config-yaml"
+
+			testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				testServerCallCount++
+
+				Expect(r.Method).To(Equal("POST"))
+				Expect(r.URL.Path).To(Equal("/cloud_configs"))
+				Expect(r.Header.Get("Content-Type")).To(Equal("text/yaml"))
+
+				username, password, ok := r.BasicAuth()
+				Expect(ok).To(BeTrue())
+				Expect(username).To(Equal("some-username"))
+				Expect(password).To(Equal("some-password"))
+
+				rawBody, err := ioutil.ReadAll(r.Body)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(rawBody)).To(Equal(cloudConfig))
+
+				w.WriteHeader(http.StatusCreated)
+			}))
+
+			client := bosh.NewClient(bosh.Config{
+				URL:      testServer.URL,
+				Username: "some-username",
+				Password: "some-password",
+			})
+
+			err := client.UpdateCloudConfig([]byte(cloudConfig))
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(testServerCallCount).To(Equal(1))
+		})
+
+		Context("failure cases", func() {
+			It("returns an error when request creation fails", func() {
+				client := bosh.NewClient(bosh.Config{
+					URL: "%%%%%",
+				})
+
+				err := client.UpdateCloudConfig([]byte(""))
+
+				Expect(err).To(MatchError(`parse %%%%%/cloud_configs: invalid URL escape "%%%"`))
+			})
+
+			It("returns an error when request fails", func() {
+				client := bosh.NewClient(bosh.Config{
+					URL: "",
+				})
+
+				err := client.UpdateCloudConfig([]byte(""))
+
+				Expect(err).To(MatchError(`unsupported protocol scheme ""`))
+			})
+
+			It("errors on an unexpected status code", func() {
+				testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					Expect(r.URL.Path).To(Equal("/cloud_configs"))
+
+					w.WriteHeader(http.StatusTeapot)
+				}))
+
+				client := bosh.NewClient(bosh.Config{
+					URL: testServer.URL,
+				})
+
+				err := client.UpdateCloudConfig([]byte(""))
+				Expect(err).To(MatchError("unexpected response 418 I'm a teapot"))
+			})
+		})
+	})
 })
