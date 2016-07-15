@@ -1636,4 +1636,89 @@ releases:
 			})
 		})
 	})
+
+	Context("DownloadManifest", func() {
+		It("downloads manifest", func() {
+			testServerCallCount := 0
+
+			testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				testServerCallCount++
+
+				Expect(r.Method).To(Equal("GET"))
+				Expect(r.URL.Path).To(Equal("/deployments/some-deployment-name"))
+
+				username, password, ok := r.BasicAuth()
+				Expect(ok).To(BeTrue())
+				Expect(username).To(Equal("some-username"))
+				Expect(password).To(Equal("some-password"))
+
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`{"manifest": "some-manifest-contents"}`))
+			}))
+
+			client := bosh.NewClient(bosh.Config{
+				URL:      testServer.URL,
+				Username: "some-username",
+				Password: "some-password",
+			})
+
+			rawManifest, err := client.DownloadManifest("some-deployment-name")
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(testServerCallCount).To(Equal(1))
+			Expect(rawManifest).To(Equal([]byte("some-manifest-contents")))
+		})
+
+		Context("failure cases", func() {
+			It("returns an error when request is malformed", func() {
+				client := bosh.NewClient(bosh.Config{
+					URL: "%%%%%",
+				})
+
+				_, err := client.DownloadManifest("some-deployment-name")
+				Expect(err).To(MatchError(`parse %%%%%/deployments/some-deployment-name: invalid URL escape "%%%"`))
+			})
+
+			It("returns an error when the request fails", func() {
+				client := bosh.NewClient(bosh.Config{
+					URL: "",
+				})
+
+				_, err := client.DownloadManifest("")
+
+				Expect(err).To(MatchError(`unsupported protocol scheme ""`))
+			})
+
+			It("errors on an unexpected status code", func() {
+				testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					Expect(r.URL.Path).To(Equal("/deployments/some-deployment-name"))
+
+					w.WriteHeader(http.StatusTeapot)
+				}))
+
+				client := bosh.NewClient(bosh.Config{
+					URL: testServer.URL,
+				})
+
+				_, err := client.DownloadManifest("some-deployment-name")
+				Expect(err).To(MatchError("unexpected response 418 I'm a teapot"))
+			})
+
+			It("returns an error when server returns malformed json", func() {
+				testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					Expect(r.URL.Path).To(Equal("/deployments/some-deployment-name"))
+
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte("%%%%%%"))
+				}))
+
+				client := bosh.NewClient(bosh.Config{
+					URL: testServer.URL,
+				})
+
+				_, err := client.DownloadManifest("some-deployment-name")
+				Expect(err).To(MatchError("invalid character '%' looking for beginning of value"))
+			})
+		})
+	})
 })
