@@ -99,9 +99,10 @@ var _ = Describe("client", func() {
 				Expect(err).To(MatchError(ContainSubstring("unsupported protocol")))
 			})
 
-			It("errors on an unexpected status code", func() {
+			It("errors on an unexpected status code with a body", func() {
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusBadGateway)
+					w.Write([]byte("More Info"))
 				}))
 
 				client := bosh.NewClient(bosh.Config{
@@ -111,7 +112,7 @@ var _ = Describe("client", func() {
 				})
 
 				_, err := client.GetTaskOutput(1)
-				Expect(err).To(MatchError("unexpected response 502 Bad Gateway"))
+				Expect(err).To(MatchError("unexpected response 502 Bad Gateway:\nMore Info"))
 			})
 
 			It("should error on a bogus response body", func() {
@@ -210,9 +211,10 @@ var _ = Describe("client", func() {
 				Expect(err).To(MatchError(ContainSubstring("unsupported protocol")))
 			})
 
-			It("errors on an unexpected status code", func() {
+			It("errors on an unexpected status code with a body", func() {
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusBadGateway)
+					w.Write([]byte("More Info"))
 				}))
 
 				client := bosh.NewClient(bosh.Config{
@@ -222,7 +224,7 @@ var _ = Describe("client", func() {
 				})
 
 				_, err := client.Deployments()
-				Expect(err).To(MatchError("unexpected response 502 Bad Gateway"))
+				Expect(err).To(MatchError("unexpected response 502 Bad Gateway:\nMore Info"))
 			})
 
 			It("error on malformed JSON", func() {
@@ -238,6 +240,27 @@ var _ = Describe("client", func() {
 
 				_, err := client.Deployments()
 				Expect(err).To(MatchError(ContainSubstring("invalid character")))
+			})
+
+			It("returns an error on a bogus response body", func() {
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusBadGateway)
+					w.Write([]byte("More Info"))
+				}))
+
+				client := bosh.NewClient(bosh.Config{
+					URL:      server.URL,
+					Username: "some-username",
+					Password: "some-password",
+				})
+
+				bosh.SetBodyReader(func(io.Reader) ([]byte, error) {
+					return nil, errors.New("a bad read happened")
+				})
+
+				_, err := client.Deployments()
+
+				Expect(err).To(MatchError("a bad read happened"))
 			})
 		})
 	})
@@ -361,9 +384,10 @@ jobs:
 				Expect(err).To(MatchError(ContainSubstring("invalid URL escape")))
 			})
 
-			It("errors when the response is not a redirect", func() {
+			It("errors when the response is not a redirect with a body", func() {
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusBadRequest)
+					w.Write([]byte("More Info"))
 				}))
 
 				client := bosh.NewClient(bosh.Config{
@@ -373,7 +397,27 @@ jobs:
 				})
 
 				err := client.ScanAndFix([]byte("---\njobs: []"))
-				Expect(err).To(MatchError("unexpected response 400 Bad Request"))
+				Expect(err).To(MatchError("unexpected response 400 Bad Request:\nMore Info"))
+			})
+
+			It("returns an error on a bogus response body", func() {
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusBadRequest)
+					w.Write([]byte("More Info"))
+				}))
+
+				client := bosh.NewClient(bosh.Config{
+					URL:      server.URL,
+					Username: "some-username",
+					Password: "some-password",
+				})
+
+				bosh.SetBodyReader(func(io.Reader) ([]byte, error) {
+					return nil, errors.New("a bad read happened")
+				})
+
+				err := client.ScanAndFix([]byte("---\njobs: []"))
+				Expect(err).To(MatchError("a bad read happened"))
 			})
 		})
 	})
@@ -411,10 +455,11 @@ jobs:
 		})
 
 		Context("failure cases", func() {
-			It("should error on a non 200 status code", func() {
+			It("should error on a non 200 status code with a body", func() {
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					Expect(r.URL.Path).To(Equal("/stemcells"))
 					w.WriteHeader(http.StatusBadRequest)
+					w.Write([]byte("More Info"))
 				}))
 
 				client := bosh.NewClient(bosh.Config{
@@ -425,7 +470,7 @@ jobs:
 
 				_, err := client.Stemcell("some-stemcell-name")
 
-				Expect(err).To(MatchError("unexpected response 400 Bad Request"))
+				Expect(err).To(MatchError("unexpected response 400 Bad Request:\nMore Info"))
 			})
 
 			It("should error with a helpful message on 404 status code", func() {
@@ -480,6 +525,26 @@ jobs:
 				_, err := client.Stemcell("some-stemcell-name")
 				Expect(err).To(MatchError(ContainSubstring("invalid character")))
 			})
+
+			It("returns an error on a bogus response body", func() {
+				testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					Expect(r.URL.Path).To(Equal("/stemcells"))
+
+					w.WriteHeader(http.StatusTeapot)
+					w.Write([]byte("More info"))
+				}))
+
+				client := bosh.NewClient(bosh.Config{
+					URL: testServer.URL,
+				})
+
+				bosh.SetBodyReader(func(io.Reader) ([]byte, error) {
+					return nil, errors.New("a bad read happened")
+				})
+
+				_, err := client.Stemcell("some-stemcell-name")
+				Expect(err).To(MatchError("a bad read happened"))
+			})
 		})
 	})
 
@@ -511,10 +576,11 @@ jobs:
 		})
 
 		Context("failure cases", func() {
-			It("should error on a non 200 status code", func() {
+			It("should error on a non 200 status code with a body", func() {
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					Expect(r.URL.Path).To(Equal("/releases/some-release-name"))
 					w.WriteHeader(http.StatusBadRequest)
+					w.Write([]byte("More Info"))
 				}))
 
 				client := bosh.NewClient(bosh.Config{
@@ -525,7 +591,7 @@ jobs:
 
 				_, err := client.Release("some-release-name")
 
-				Expect(err).To(MatchError("unexpected response 400 Bad Request"))
+				Expect(err).To(MatchError("unexpected response 400 Bad Request:\nMore Info"))
 			})
 
 			It("should error with a helpful message on 404 status code", func() {
@@ -581,6 +647,25 @@ jobs:
 				Expect(err).To(MatchError(ContainSubstring("invalid URL escape")))
 			})
 
+			It("returns an error on a bogus response body", func() {
+				testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					Expect(r.URL.Path).To(Equal("/releases/some-release-name"))
+
+					w.WriteHeader(http.StatusTeapot)
+					w.Write([]byte("More info"))
+				}))
+
+				client := bosh.NewClient(bosh.Config{
+					URL: testServer.URL,
+				})
+
+				bosh.SetBodyReader(func(io.Reader) ([]byte, error) {
+					return nil, errors.New("a bad read happened")
+				})
+
+				_, err := client.Release("some-release-name")
+				Expect(err).To(MatchError("a bad read happened"))
+			})
 		})
 	})
 
@@ -633,9 +718,10 @@ jobs:
 				Expect(err).To(MatchError(ContainSubstring("unsupported protocol")))
 			})
 
-			It("errors on an unexpected status code", func() {
+			It("returns an error on an unexpected status code with body", func() {
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusBadGateway)
+					w.Write([]byte("More Info"))
 				}))
 
 				client := bosh.NewClient(bosh.Config{
@@ -645,9 +731,26 @@ jobs:
 				})
 
 				_, err := client.Info()
-				Expect(err).To(MatchError("unexpected response 502 Bad Gateway"))
+				Expect(err).To(MatchError("unexpected response 502 Bad Gateway:\nMore Info"))
 			})
 
+			It("returns an error on a bogus response body", func() {
+				testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusBadGateway)
+					w.Write([]byte("More Info"))
+				}))
+
+				client := bosh.NewClient(bosh.Config{
+					URL: testServer.URL,
+				})
+
+				bosh.SetBodyReader(func(io.Reader) ([]byte, error) {
+					return nil, errors.New("a bad read happened")
+				})
+
+				_, err := client.Info()
+				Expect(err).To(MatchError("a bad read happened"))
+			})
 		})
 	})
 
@@ -709,12 +812,13 @@ jobs:
 				Expect(err).To(MatchError("a valid deployment name is required"))
 			})
 
-			It("should error on a non 302 redirect response", func() {
+			It("should error on a non 302 redirect response with a body", func() {
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					switch r.URL.Path {
 					case "/deployments/some-deployment-name":
 						w.Header().Set("Location", fmt.Sprintf("http://%s/tasks/1", r.Host))
 						w.WriteHeader(http.StatusBadRequest)
+						w.Write([]byte("More Info"))
 					case "/tasks/1":
 						Fail("should not have redirected to this task")
 					default:
@@ -731,7 +835,37 @@ jobs:
 
 				err := client.DeleteDeployment("some-deployment-name")
 
-				Expect(err).To(MatchError("unexpected response 400 Bad Request"))
+				Expect(err).To(MatchError("unexpected response 400 Bad Request:\nMore Info"))
+			})
+
+			It("returns an error on a bogus response body", func() {
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					switch r.URL.Path {
+					case "/deployments/some-deployment-name":
+						w.Header().Set("Location", fmt.Sprintf("http://%s/tasks/1", r.Host))
+						w.WriteHeader(http.StatusBadRequest)
+						w.Write([]byte("More Info"))
+					case "/tasks/1":
+						Fail("should not have redirected to this task")
+					default:
+						Fail("could not match any URL endpoints")
+					}
+				}))
+
+				client := bosh.NewClient(bosh.Config{
+					URL:                 server.URL,
+					Username:            "some-username",
+					Password:            "some-password",
+					TaskPollingInterval: time.Nanosecond,
+				})
+
+				bosh.SetBodyReader(func(io.Reader) ([]byte, error) {
+					return nil, errors.New("a bad read happened")
+				})
+
+				err := client.DeleteDeployment("some-deployment-name")
+
+				Expect(err).To(MatchError("a bad read happened"))
 			})
 
 			It("should error on an errored task status", func() {
@@ -934,12 +1068,13 @@ jobs:
 		})
 
 		Context("failure cases", func() {
-			It("should error on a non 302 redirect response", func() {
+			It("should error on a non 302 redirect response with a body", func() {
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					switch r.URL.Path {
 					case "/deployments":
 						w.Header().Set("Location", fmt.Sprintf("http://%s/tasks/1", r.Host))
 						w.WriteHeader(http.StatusBadRequest)
+						w.Write([]byte("More Info"))
 					case "/tasks/1":
 						Fail("should not have redirected to this task")
 					default:
@@ -956,7 +1091,33 @@ jobs:
 
 				_, err := client.Deploy([]byte("some-yaml"))
 
-				Expect(err).To(MatchError("unexpected response 400 Bad Request"))
+				Expect(err).To(MatchError("unexpected response 400 Bad Request:\nMore Info"))
+			})
+
+			It("returns an error on a bogus response body", func() {
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					switch r.URL.Path {
+					case "/deployments":
+						w.Header().Set("Location", fmt.Sprintf("http://%s/tasks/1", r.Host))
+						w.WriteHeader(http.StatusBadRequest)
+						w.Write([]byte("More Info"))
+					case "/tasks/1":
+						Fail("should not have redirected to this task")
+					default:
+						Fail("could not match any URL endpoints")
+					}
+				}))
+
+				client := bosh.NewClient(bosh.Config{
+					URL: server.URL,
+				})
+
+				bosh.SetBodyReader(func(io.Reader) ([]byte, error) {
+					return nil, errors.New("a bad read happened")
+				})
+
+				_, err := client.Deploy([]byte("some-yaml"))
+				Expect(err).To(MatchError("a bad read happened"))
 			})
 
 			It("should error on an error task status", func() {
@@ -1284,10 +1445,11 @@ jobs:
 				Expect(err).To(MatchError(ContainSubstring("invalid character")))
 			})
 
-			It("should error on a non StatusFound status code", func() {
+			It("should error on a non StatusFound status code with a body", func() {
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					Expect(r.URL.Path).To(Equal("/deployments/some-deployment-name/vms"))
 					w.WriteHeader(http.StatusNotFound)
+					w.Write([]byte("More Info"))
 				}))
 
 				client := bosh.NewClient(bosh.Config{
@@ -1297,7 +1459,7 @@ jobs:
 				})
 
 				_, err := client.DeploymentVMs("some-deployment-name")
-				Expect(err).To(MatchError("unexpected response 404 Not Found"))
+				Expect(err).To(MatchError("unexpected response 404 Not Found:\nMore Info"))
 			})
 
 			It("errors when the redirect URL is malformed", func() {
@@ -1347,6 +1509,26 @@ jobs:
 					default:
 						Fail("unexpected route")
 					}
+				}))
+
+				client := bosh.NewClient(bosh.Config{
+					URL:      server.URL,
+					Username: "some-username",
+					Password: "some-password",
+				})
+
+				bosh.SetBodyReader(func(io.Reader) ([]byte, error) {
+					return nil, errors.New("a bad read happened")
+				})
+				_, err := client.DeploymentVMs("some-deployment-name")
+				Expect(err).To(MatchError("a bad read happened"))
+			})
+
+			It("should error on a bogus response body when unexpected response occurs", func() {
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					Expect(r.URL.Path).To(Equal("/deployments/some-deployment-name/vms"))
+					w.WriteHeader(http.StatusNotFound)
+					w.Write([]byte("More Info"))
 				}))
 
 				client := bosh.NewClient(bosh.Config{
@@ -1620,11 +1802,32 @@ releases:
 				Expect(err).To(MatchError(`unsupported protocol scheme ""`))
 			})
 
-			It("errors on an unexpected status code", func() {
+			It("returns an error on a bogus response body", func() {
 				testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					Expect(r.URL.Path).To(Equal("/cloud_configs"))
 
 					w.WriteHeader(http.StatusTeapot)
+					w.Write([]byte("More info"))
+				}))
+
+				client := bosh.NewClient(bosh.Config{
+					URL: testServer.URL,
+				})
+
+				bosh.SetBodyReader(func(io.Reader) ([]byte, error) {
+					return nil, errors.New("a bad read happened")
+				})
+
+				err := client.UpdateCloudConfig([]byte(""))
+				Expect(err).To(MatchError("a bad read happened"))
+			})
+
+			It("errors on an unexpected status code with body", func() {
+				testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					Expect(r.URL.Path).To(Equal("/cloud_configs"))
+
+					w.WriteHeader(http.StatusTeapot)
+					w.Write([]byte("More info"))
 				}))
 
 				client := bosh.NewClient(bosh.Config{
@@ -1632,7 +1835,7 @@ releases:
 				})
 
 				err := client.UpdateCloudConfig([]byte(""))
-				Expect(err).To(MatchError("unexpected response 418 I'm a teapot"))
+				Expect(err).To(MatchError("unexpected response 418 I'm a teapot:\nMore info"))
 			})
 		})
 	})
@@ -1689,11 +1892,12 @@ releases:
 				Expect(err).To(MatchError(`unsupported protocol scheme ""`))
 			})
 
-			It("errors on an unexpected status code", func() {
+			It("errors on an unexpected status code with a body", func() {
 				testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					Expect(r.URL.Path).To(Equal("/deployments/some-deployment-name"))
 
 					w.WriteHeader(http.StatusTeapot)
+					w.Write([]byte("More Info"))
 				}))
 
 				client := bosh.NewClient(bosh.Config{
@@ -1701,7 +1905,27 @@ releases:
 				})
 
 				_, err := client.DownloadManifest("some-deployment-name")
-				Expect(err).To(MatchError("unexpected response 418 I'm a teapot"))
+				Expect(err).To(MatchError("unexpected response 418 I'm a teapot:\nMore Info"))
+			})
+
+			It("returns an error on a bogus response body", func() {
+				testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					Expect(r.URL.Path).To(Equal("/deployments/some-deployment-name"))
+
+					w.WriteHeader(http.StatusTeapot)
+					w.Write([]byte("More Info"))
+				}))
+
+				client := bosh.NewClient(bosh.Config{
+					URL: testServer.URL,
+				})
+
+				bosh.SetBodyReader(func(io.Reader) ([]byte, error) {
+					return nil, errors.New("a bad read happened")
+				})
+
+				_, err := client.DownloadManifest("some-deployment-name")
+				Expect(err).To(MatchError("a bad read happened"))
 			})
 
 			It("returns an error when server returns malformed json", func() {

@@ -69,9 +69,10 @@ var _ = Describe("TaskResult", func() {
 		})
 
 		Context("when the request returns an unexpected status code", func() {
-			It("returns an error", func() {
+			It("returns an error with the body", func() {
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusTeapot)
+					w.Write([]byte("More Info"))
 				}))
 
 				client := bosh.NewClient(bosh.Config{
@@ -81,7 +82,7 @@ var _ = Describe("TaskResult", func() {
 				})
 
 				_, err := client.TaskResult(2)
-				Expect(err).To(MatchError("unexpected response 418 I'm a teapot"))
+				Expect(err).To(MatchError("unexpected response 418 I'm a teapot:\nMore Info"))
 			})
 		})
 

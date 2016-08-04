@@ -141,6 +141,7 @@ var _ = Describe("ExportRelease", func() {
 
 					case "/tasks/5/output":
 						w.WriteHeader(http.StatusTeapot)
+						w.Write([]byte("More Info"))
 
 					default:
 						Fail(fmt.Sprintf("unhandled response %s", req.URL.Path))
@@ -156,7 +157,7 @@ var _ = Describe("ExportRelease", func() {
 				_, err := client.ExportRelease("some-deployment-name",
 					"some-release-name", "some-release-version",
 					"some-stemcell-name", "some-stemcell-version")
-				Expect(err).To(MatchError("unexpected response 418 I'm a teapot"))
+				Expect(err).To(MatchError("unexpected response 418 I'm a teapot:\nMore Info"))
 			})
 		})
 

@@ -1,6 +1,8 @@
 package bosh_test
 
 import (
+	"errors"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -69,9 +71,10 @@ var _ = Describe("Resource", func() {
 		})
 
 		Context("when the request returns an unexpected status code", func() {
-			It("returns an error", func() {
+			It("returns an error with the body", func() {
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusTeapot)
+					w.Write([]byte("More Info"))
 				}))
 
 				client := bosh.NewClient(bosh.Config{
@@ -81,7 +84,30 @@ var _ = Describe("Resource", func() {
 				})
 
 				_, err := client.Resource("some-resource-guid")
-				Expect(err).To(MatchError("unexpected response 418 I'm a teapot"))
+				Expect(err).To(MatchError("unexpected response 418 I'm a teapot:\nMore Info"))
+			})
+		})
+
+		Context("when the response body cannot be read", func() {
+			It("returns an error", func() {
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusTeapot)
+					w.Write([]byte("More Info"))
+				}))
+
+				client := bosh.NewClient(bosh.Config{
+					URL:      server.URL,
+					Username: "some-username",
+					Password: "some-password",
+				})
+
+				bosh.SetBodyReader(func(io.Reader) ([]byte, error) {
+					return nil, errors.New("a bad read happened")
+				})
+
+				_, err := client.Resource("some-resource-guid")
+
+				Expect(err).To(MatchError("a bad read happened"))
 			})
 		})
 	})

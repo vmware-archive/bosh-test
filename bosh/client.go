@@ -125,15 +125,15 @@ func (c Client) GetTaskOutput(taskId int) ([]TaskOutput, error) {
 		return []TaskOutput{}, err
 	}
 
-	if response.StatusCode != http.StatusOK {
-		return []TaskOutput{}, fmt.Errorf("unexpected response %d %s", response.StatusCode, http.StatusText(response.StatusCode))
-	}
-
 	body, err := bodyReader(response.Body)
 	if err != nil {
 		return []TaskOutput{}, err
 	}
 	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		return []TaskOutput{}, fmt.Errorf("unexpected response %d %s:\n%s", response.StatusCode, http.StatusText(response.StatusCode), body)
+	}
 
 	body = bytes.TrimSpace(body)
 	parts := bytes.Split(body, []byte("\n"))
@@ -239,7 +239,13 @@ func (c Client) Stemcell(name string) (Stemcell, error) {
 	}
 
 	if response.StatusCode != http.StatusOK {
-		return Stemcell{}, fmt.Errorf("unexpected response %d %s", response.StatusCode, http.StatusText(response.StatusCode))
+		body, err := bodyReader(response.Body)
+		if err != nil {
+			return Stemcell{}, err
+		}
+		defer response.Body.Close()
+
+		return Stemcell{}, fmt.Errorf("unexpected response %d %s:\n%s", response.StatusCode, http.StatusText(response.StatusCode), body)
 	}
 
 	stemcells := []struct {
@@ -281,7 +287,13 @@ func (c Client) Release(name string) (Release, error) {
 	}
 
 	if response.StatusCode != http.StatusOK {
-		return Release{}, fmt.Errorf("unexpected response %d %s", response.StatusCode, http.StatusText(response.StatusCode))
+		body, err := bodyReader(response.Body)
+		if err != nil {
+			return Release{}, err
+		}
+		defer response.Body.Close()
+
+		return Release{}, fmt.Errorf("unexpected response %d %s:\n%s", response.StatusCode, http.StatusText(response.StatusCode), body)
 	}
 
 	release := NewRelease()
@@ -314,7 +326,13 @@ func (c Client) DeploymentVMs(name string) ([]VM, error) {
 	}
 
 	if response.StatusCode != http.StatusFound {
-		return []VM{}, fmt.Errorf("unexpected response %d %s", response.StatusCode, http.StatusText(response.StatusCode))
+		body, err := bodyReader(response.Body)
+		if err != nil {
+			return []VM{}, err
+		}
+		defer response.Body.Close()
+
+		return []VM{}, fmt.Errorf("unexpected response %d %s:\n%s", response.StatusCode, http.StatusText(response.StatusCode), body)
 	}
 
 	location := response.Header.Get("Location")
@@ -370,7 +388,13 @@ func (c Client) Info() (DirectorInfo, error) {
 	}
 
 	if response.StatusCode != http.StatusOK {
-		return DirectorInfo{}, fmt.Errorf("unexpected response %d %s", response.StatusCode, http.StatusText(response.StatusCode))
+		body, err := bodyReader(response.Body)
+		if err != nil {
+			return DirectorInfo{}, err
+		}
+		defer response.Body.Close()
+
+		return DirectorInfo{}, fmt.Errorf("unexpected response %d %s:\n%s", response.StatusCode, http.StatusText(response.StatusCode), body)
 	}
 
 	info := DirectorInfo{}
@@ -400,8 +424,14 @@ func (c Client) Deploy(manifest []byte) (int, error) {
 		return 0, err
 	}
 
+	body, err := bodyReader(response.Body)
+	if err != nil {
+		return 0, err
+	}
+	defer response.Body.Close()
+
 	if response.StatusCode != http.StatusFound {
-		return 0, fmt.Errorf("unexpected response %d %s", response.StatusCode, http.StatusText(response.StatusCode))
+		return 0, fmt.Errorf("unexpected response %d %s:\n%s", response.StatusCode, http.StatusText(response.StatusCode), body)
 	}
 
 	return c.checkTaskStatus(response.Header.Get("Location"))
@@ -450,8 +480,14 @@ func (c Client) ScanAndFix(manifestYAML []byte) error {
 		return err
 	}
 
+	body, err := bodyReader(response.Body)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
 	if response.StatusCode != http.StatusFound {
-		return fmt.Errorf("unexpected response %d %s", response.StatusCode, http.StatusText(response.StatusCode))
+		return fmt.Errorf("unexpected response %d %s:\n%s", response.StatusCode, http.StatusText(response.StatusCode), body)
 	}
 
 	_, err = c.checkTaskStatus(response.Header.Get("Location"))
@@ -479,8 +515,14 @@ func (c Client) DeleteDeployment(name string) error {
 		return err
 	}
 
+	body, err := bodyReader(response.Body)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
 	if response.StatusCode != http.StatusFound {
-		return fmt.Errorf("unexpected response %d %s", response.StatusCode, http.StatusText(response.StatusCode))
+		return fmt.Errorf("unexpected response %d %s:\n%s", response.StatusCode, http.StatusText(response.StatusCode), body)
 	}
 
 	_, err = c.checkTaskStatus(response.Header.Get("Location"))
@@ -535,7 +577,13 @@ func (c Client) Deployments() ([]Deployment, error) {
 	}
 
 	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected response %d %s", response.StatusCode, http.StatusText(response.StatusCode))
+		body, err := bodyReader(response.Body)
+		if err != nil {
+			return nil, err
+		}
+		defer response.Body.Close()
+
+		return nil, fmt.Errorf("unexpected response %d %s:\n%s", response.StatusCode, http.StatusText(response.StatusCode), body)
 	}
 
 	var deployments []Deployment
@@ -561,8 +609,14 @@ func (c Client) UpdateCloudConfig(cloudConfig []byte) error {
 		return err
 	}
 
+	body, err := bodyReader(response.Body)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
 	if response.StatusCode != http.StatusCreated {
-		return fmt.Errorf("unexpected response %d %s", response.StatusCode, http.StatusText(response.StatusCode))
+		return fmt.Errorf("unexpected response %d %s:\n%s", response.StatusCode, http.StatusText(response.StatusCode), body)
 	}
 
 	return nil
@@ -582,7 +636,13 @@ func (c Client) DownloadManifest(deploymentName string) ([]byte, error) {
 	}
 
 	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected response %d %s", response.StatusCode, http.StatusText(response.StatusCode))
+		body, err := bodyReader(response.Body)
+		if err != nil {
+			return nil, err
+		}
+		defer response.Body.Close()
+
+		return nil, fmt.Errorf("unexpected response %d %s:\n%s", response.StatusCode, http.StatusText(response.StatusCode), body)
 	}
 
 	var result deploymentManifest

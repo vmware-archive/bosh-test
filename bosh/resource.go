@@ -20,7 +20,13 @@ func (c Client) Resource(resourceId string) (io.ReadCloser, error) {
 	}
 
 	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected response %s", response.Status)
+		body, err := bodyReader(response.Body)
+		if err != nil {
+			return nil, err
+		}
+		defer response.Body.Close()
+
+		return nil, fmt.Errorf("unexpected response %s:\n%s", response.Status, body)
 	}
 
 	return response.Body, nil
