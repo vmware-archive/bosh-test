@@ -24,10 +24,19 @@ var _ = Describe("Deployments", func() {
 			Expect(password).To(Equal("some-password"))
 
 			w.Write([]byte(`[
-					{"name": "deployment1"},
-					{"name": "deployment2"},
-					{"name": "deployment3"}
-				]`))
+				{
+					"name": "cardeployment",
+					"releases": [{"name": "sports-release", "version": "ferrari-version"}],
+					"stemcells": [{"name": "sedan-stemcell", "version": "lexus-version"}],
+					"cloud_config": "some-cloud-config"
+				},
+				{
+					"name": "animaldeployment",
+					"releases": [{"name": "ungulate-release", "version": "cow-version"}, {"name": "ungulate-release", "version": "yak-version"}],
+					"stemcells": [{"name": "canid-stemcell", "version": "wolf-version"}, {"name": "canid-stemcell", "version": "dog-version"}],
+					"cloud_config": "some-other-cloud-config"
+				}
+			]`))
 		}))
 
 		client := bosh.NewClient(bosh.Config{
@@ -41,13 +50,34 @@ var _ = Describe("Deployments", func() {
 		Expect(deployments).To(Equal(
 			[]bosh.Deployment{
 				{
-					Name: "deployment1",
+					Name: "cardeployment",
+					Releases: []bosh.Release{
+						{
+							Name:     "sports-release",
+							Versions: []string{"ferrari-version"},
+						},
+					},
+					Stemcells: []bosh.Stemcell{
+						{
+							Name:     "sedan-stemcell",
+							Versions: []string{"lexus-version"},
+						},
+					},
+					CloudConfig: "some-cloud-config",
 				},
 				{
-					Name: "deployment2",
-				},
-				{
-					Name: "deployment3",
+					Name: "animaldeployment",
+					Releases: []bosh.Release{
+						{
+							Name:     "ungulate-release",
+							Versions: []string{"cow-version", "yak-version"},
+						},
+					},
+					Stemcells: []bosh.Stemcell{{
+						Name:     "canid-stemcell",
+						Versions: []string{"wolf-version", "dog-version"},
+					}},
+					CloudConfig: "some-other-cloud-config",
 				},
 			},
 		))
