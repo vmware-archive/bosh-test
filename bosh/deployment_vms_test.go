@@ -47,10 +47,10 @@ var _ = Describe("DeploymentVMs", func() {
 				Expect(taskCallCount).NotTo(Equal(0))
 
 				w.Write([]byte(`
-						{"index": 0, "job_name": "consul_z1", "job_state":"some-state"}
-						{"index": 0, "job_name": "etcd_z1", "job_state":"some-state"}
-						{"index": 1, "job_name": "etcd_z1", "job_state":"some-other-state"}
-						{"index": 2, "job_name": "etcd_z1", "job_state":"some-more-state"}
+						{"index": 0, "job_name": "consul_z1", "job_state":"some-state", "ips": ["1.2.3.4"]}
+						{"index": 0, "job_name": "etcd_z1", "job_state":"some-state", "ips": ["1.2.3.5"]}
+						{"index": 1, "job_name": "etcd_z1", "job_state":"some-other-state", "ips": ["1.2.3.6"]}
+						{"index": 2, "job_name": "etcd_z1", "job_state":"some-more-state", "ips": ["1.2.3.7"]}
 					`))
 			default:
 				Fail("unknown route")
@@ -70,21 +70,25 @@ var _ = Describe("DeploymentVMs", func() {
 				Index:   0,
 				JobName: "consul_z1",
 				State:   "some-state",
+				IPs:     []string{"1.2.3.4"},
 			},
 			{
 				Index:   0,
 				JobName: "etcd_z1",
 				State:   "some-state",
+				IPs:     []string{"1.2.3.5"},
 			},
 			{
 				Index:   1,
 				JobName: "etcd_z1",
 				State:   "some-other-state",
+				IPs:     []string{"1.2.3.6"},
 			},
 			{
 				Index:   2,
 				JobName: "etcd_z1",
 				State:   "some-more-state",
+				IPs:     []string{"1.2.3.7"},
 			},
 		}))
 	})

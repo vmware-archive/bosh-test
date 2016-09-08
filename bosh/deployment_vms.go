@@ -8,9 +8,10 @@ import (
 )
 
 type VM struct {
-	Index   int    `json:"index"`
-	State   string `json:"job_state"`
-	JobName string `json:"job_name"`
+	Index   int      `json:"index"`
+	State   string   `json:"job_state"`
+	JobName string   `json:"job_name"`
+	IPs     []string `json:"ips"`
 }
 
 func (c Client) DeploymentVMs(name string) ([]VM, error) {
