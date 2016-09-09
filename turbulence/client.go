@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+const million int64 = 1000000
+
 type Client struct {
 	baseURL          string
 	operationTimeout time.Duration
@@ -41,7 +43,13 @@ type killTask struct {
 	Type string
 }
 
-type killCommand struct {
+type controlNetTask struct {
+	Type    string
+	Timeout string
+	Delay   string
+}
+
+type command struct {
 	Tasks       []interface{}
 	Deployments []deployment
 }
@@ -54,8 +62,33 @@ func NewClient(baseURL string, operationTimeout time.Duration, pollingInterval t
 	}
 }
 
+func (c Client) Delay(deploymentName string, jobName string, indices []int, delay time.Duration, timeout time.Duration) error {
+	command := command{
+		Tasks: []interface{}{
+			controlNetTask{Type: "control-net",
+				Timeout: fmt.Sprintf("%dms", timeout.Nanoseconds()/million),
+				Delay:   fmt.Sprintf("%dms", delay.Nanoseconds()/million)}},
+		Deployments: []deployment{{
+			Name: deploymentName,
+			Jobs: []job{{Name: jobName, Indices: indices}},
+		}},
+	}
+
+	jsonCommand, err := json.Marshal(command)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.makeRequest("POST", c.baseURL+"/api/v1/incidents", bytes.NewBuffer(jsonCommand))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (c Client) KillIndices(deploymentName, jobName string, indices []int) error {
-	command := killCommand{
+	command := command{
 		Tasks: []interface{}{
 			killTask{Type: "kill"},
 		},

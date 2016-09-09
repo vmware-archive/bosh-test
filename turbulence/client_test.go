@@ -24,6 +24,21 @@ const expectedPOSTRequest = `{
 	}]
 }`
 
+const expectedDelayPOSTRequest = `{
+	"Tasks": [{
+		"Type": "control-net",
+		"Timeout": "2000ms",
+		"Delay": "1000ms"
+	}],
+	"Deployments": [{
+		"Name": "deployment-name",
+		"Jobs": [{
+			"Name": "job-name",
+			"Indices": [0]
+		}]
+	}]
+}`
+
 const successfulPOSTResponse = `{
 	"ID": "someID",
 	"ExecutionStartedAt": "0001-01-01T00:00:00Z",
@@ -69,10 +84,11 @@ const failedGETResponse = `{
 type fakeTurbulenceServer struct {
 	URL string
 
-	receivedPOSTBody []byte
-	errorReadingBody error
-	POSTResponse     string
-	GETResponses     []string
+	receivedPOSTBody      []byte
+	errorReadingBody      error
+	POSTResponse          string
+	GETResponses          []string
+	postIncidentCallCount int
 }
 
 func NewFakeTurbulenceServer() *fakeTurbulenceServer {
@@ -83,6 +99,7 @@ func NewFakeTurbulenceServer() *fakeTurbulenceServer {
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		switch {
 		case request.URL.Path == "/api/v1/incidents" && request.Method == "POST":
+			fakeServer.postIncidentCallCount++
 			fakeServer.receivedPOSTBody, fakeServer.errorReadingBody = ioutil.ReadAll(request.Body)
 			defer request.Body.Close()
 			writer.Write([]byte(fakeServer.POSTResponse))
@@ -152,6 +169,31 @@ var _ = Describe("Client", func() {
 			fakeServer.POSTResponse = "some-invalid-json"
 			errorKillingIndices := client.KillIndices("deployment-name", "job-name", []int{0})
 			Expect(errorKillingIndices.Error()).To(ContainSubstring("Unable to decode turbulence response."))
+		})
+	})
+
+	Describe("Delay", func() {
+		var fakeServer *fakeTurbulenceServer
+		var client turbulence.Client
+
+		BeforeEach(func() {
+			fakeServer = NewFakeTurbulenceServer()
+			client = turbulence.NewClient(fakeServer.URL, 100*time.Millisecond, 40*time.Millisecond)
+		})
+
+		It("makes a GET request to create a control-network delay incident", func() {
+			err := client.Delay("deployment-name", "job-name", []int{0}, time.Second, 2*time.Second)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeServer.postIncidentCallCount).To(Equal(1))
+			Expect(fakeServer.errorReadingBody).NotTo(HaveOccurred())
+			Expect(string(fakeServer.receivedPOSTBody)).To(MatchJSON(expectedDelayPOSTRequest))
+		})
+
+		It("returns an error when the post request fails", func() {
+			clientWithMalformedBaseURL := turbulence.NewClient("%%%%%", 100*time.Millisecond, 40*time.Millisecond)
+			errorDelaying := clientWithMalformedBaseURL.Delay("deployment-name", "job-name", []int{0}, time.Second, 2*time.Second)
+			Expect(errorDelaying.Error()).To(ContainSubstring("invalid URL escape"))
 		})
 	})
 })
