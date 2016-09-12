@@ -9,7 +9,15 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-func (c Client) ScanAndFix(manifestYAML []byte) error {
+func (c Client) ScanAndFix(deploymentName, jobName string, jobIndices []int) error {
+	return c.doScanAndFixRequest(deploymentName, map[string]interface{}{
+		"jobs": map[string][]int{
+			jobName: jobIndices,
+		},
+	})
+}
+
+func (c Client) ScanAndFixAll(manifestYAML []byte) error {
 	var manifest struct {
 		Name string
 		Jobs []struct {
@@ -33,17 +41,21 @@ func (c Client) ScanAndFix(manifestYAML []byte) error {
 		}
 	}
 
-	requestBody, err := json.Marshal(map[string]interface{}{
+	return c.doScanAndFixRequest(manifest.Name, map[string]interface{}{
 		"jobs": jobs,
 	})
+}
+
+func (c Client) doScanAndFixRequest(deploymentName string, payload map[string]interface{}) error {
+	requestBody, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	request, err := http.NewRequest("PUT", fmt.Sprintf("%s/deployments/%s/scan_and_fix", c.config.URL, deploymentName), bytes.NewBuffer(requestBody))
 	if err != nil {
 		return err
 	}
 
-	request, err := http.NewRequest("PUT", fmt.Sprintf("%s/deployments/%s/scan_and_fix", c.config.URL, manifest.Name), bytes.NewBuffer(requestBody))
-	if err != nil {
-		return err
-	}
 	request.SetBasicAuth(c.config.Username, c.config.Password)
 	request.Header.Set("Content-Type", "application/json")
 
@@ -52,14 +64,14 @@ func (c Client) ScanAndFix(manifestYAML []byte) error {
 		return err
 	}
 
-	body, err := bodyReader(response.Body)
+	responseBody, err := bodyReader(response.Body)
 	if err != nil {
 		return err
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusFound {
-		return fmt.Errorf("unexpected response %d %s:\n%s", response.StatusCode, http.StatusText(response.StatusCode), body)
+		return fmt.Errorf("unexpected response %d %s:\n%s", response.StatusCode, http.StatusText(response.StatusCode), responseBody)
 	}
 
 	_, err = c.checkTaskStatus(response.Header.Get("Location"))
