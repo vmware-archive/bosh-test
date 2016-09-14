@@ -139,19 +139,22 @@ var _ = Describe("Stemcell", func() {
 			})
 		})
 	})
+
 	Context("Latest", func() {
 		It("should return the latest stemcell available", func() {
 			stemcell := bosh.NewStemcell()
 			stemcell.Versions = []string{
 				"2127",
 				"3147",
+				"3126.11",
 				"389",
+				"3147.2",
 				"3126",
 			}
 
 			version, err := stemcell.Latest()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(version).To(Equal("3147"))
+			Expect(version).To(Equal("3147.2"))
 		})
 
 		It("should handle no installed stemcells", func() {
@@ -160,6 +163,16 @@ var _ = Describe("Stemcell", func() {
 
 			_, err := stemcell.Latest()
 			Expect(err).To(MatchError("no stemcell versions found, cannot get latest"))
+		})
+
+		It("returns an error when the stemcell version cannot be parsed", func() {
+			stemcell := bosh.NewStemcell()
+			stemcell.Versions = []string{
+				"baseball",
+			}
+
+			_, err := stemcell.Latest()
+			Expect(err).To(MatchError(`strconv.ParseFloat: parsing "baseball": invalid syntax`))
 		})
 	})
 })

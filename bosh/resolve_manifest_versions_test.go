@@ -27,9 +27,9 @@ var _ = Describe("ResolveManifestVersions", func() {
 			case "/stemcells":
 				Expect(r.Method).To(Equal("GET"))
 				w.Write([]byte(`[
-					{"name": "some-stemcell-name","version": "1.0.0"},
-					{"name": "some-stemcell-name","version": "2.0.0"},
-					{"name": "some-other-stemcell-name","version": "100.0.0"}
+					{"name": "some-stemcell-name","version": "1"},
+					{"name": "some-stemcell-name","version": "2"},
+					{"name": "some-other-stemcell-name","version": "100"}
 				]`))
 			default:
 				Fail("unexpected route")
@@ -57,7 +57,7 @@ resource_pools:
   env: some-env
   stemcell:
     name: "some-stemcell-name"
-    version: 1.0.0
+    version: 1
 - name: some-resource-pool-2
   network: some-network
   stemcell:
@@ -93,17 +93,17 @@ resource_pools:
   env: some-env
   stemcell:
     name: "some-stemcell-name"
-    version: 1.0.0
+    version: "1"
 - name: some-resource-pool-2
   network: some-network
   stemcell:
     name: "some-stemcell-name"
-    version: 2.0.0
+    version: "2"
 - name: some-resource-pool-3
   network: some-network
   stemcell:
     name: "some-other-stemcell-name"
-    version: 100.0.0
+    version: "100"
 jobs: some-jobs-value
 properties: some-properties-value
 releases:
