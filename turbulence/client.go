@@ -20,13 +20,22 @@ type Client struct {
 }
 
 type Response struct {
-	ID                   string           `json:"ID"`
-	ExecutionCompletedAt string           `json:"ExecutionCompletedAt"`
-	Events               []*ResponseEvent `json:"Events"`
+	ID                   string          `json:"ID"`
+	ExecutionStartedAt   string          `json:"ExecutionStartedAt"`
+	ExecutionCompletedAt string          `json:"ExecutionCompletedAt"`
+	Events               []ResponseEvent `json:"Events"`
 }
 
 type ResponseEvent struct {
-	Error string `json:"Error"`
+	Error                string `json:"Error"`
+	ID                   string `json:"ID"`
+	Type                 string `json:"Type"`
+	DeploymentName       string `json:"DeploymentName"`
+	JobName              string `json:"JobName"`
+	JobNameMatch         string `json:"JobNameMatch"`
+	JobIndex             int    `json:"JobIndex"`
+	ExecutionStartedAt   string `json:"ExecutionStartedAt"`
+	ExecutionCompletedAt string `json:"ExecutionCompletedAt"`
 }
 
 type deployment struct {
@@ -62,7 +71,7 @@ func NewClient(baseURL string, operationTimeout time.Duration, pollingInterval t
 	}
 }
 
-func (c Client) Delay(deploymentName string, jobName string, indices []int, delay time.Duration, timeout time.Duration) error {
+func (c Client) Delay(deploymentName string, jobName string, indices []int, delay time.Duration, timeout time.Duration) (Response, error) {
 	command := command{
 		Tasks: []interface{}{
 			controlNetTask{Type: "control-net",
@@ -76,15 +85,40 @@ func (c Client) Delay(deploymentName string, jobName string, indices []int, dela
 
 	jsonCommand, err := json.Marshal(command)
 	if err != nil {
-		return err
+		return Response{}, err
 	}
 
-	_, err = c.makeRequest("POST", c.baseURL+"/api/v1/incidents", bytes.NewBuffer(jsonCommand))
+	resp, err := c.makeRequest("POST", c.baseURL+"/api/v1/incidents", bytes.NewBuffer(jsonCommand))
 	if err != nil {
-		return err
+		return Response{}, err
 	}
 
-	return nil
+	return c.pollControlNetStarted(resp.ID)
+}
+
+func (c Client) pollControlNetStarted(id string) (Response, error) {
+	startTime := time.Now()
+	for {
+		turbulenceResponse, err := c.makeRequest("GET", fmt.Sprintf("%s/api/v1/incidents/%s", c.baseURL, id), nil)
+		if err != nil {
+			return turbulenceResponse, err
+		}
+
+		for _, event := range turbulenceResponse.Events {
+			if event.Error != "" {
+				return turbulenceResponse, errors.New(event.Error)
+			}
+			if event.Type == "ControlNet" && event.ExecutionStartedAt != "" {
+				return turbulenceResponse, nil
+			}
+		}
+
+		if time.Now().Sub(startTime) > c.operationTimeout {
+			return turbulenceResponse, errors.New(fmt.Sprintf("Did not start control-net event in time: %d", c.operationTimeout))
+		}
+
+		time.Sleep(c.pollingInterval)
+	}
 }
 
 func (c Client) KillIndices(deploymentName, jobName string, indices []int) error {
@@ -114,12 +148,22 @@ func (c Client) KillIndices(deploymentName, jobName string, indices []int) error
 func (c Client) pollRequestCompletedDeletingVM(id string) error {
 	startTime := time.Now()
 	for {
-		incidentCompleted, err := c.isIncidentCompleted(id)
+		turbulenceResponse, err := c.makeRequest("GET", fmt.Sprintf("%s/api/v1/incidents/%s", c.baseURL, id), nil)
 		if err != nil {
 			return err
 		}
 
-		if incidentCompleted {
+		if turbulenceResponse.ExecutionCompletedAt != "" {
+			if len(turbulenceResponse.Events) == 0 {
+				return errors.New("There should at least be one Event in response from turbulence.")
+			}
+
+			for _, event := range turbulenceResponse.Events {
+				if event.Error != "" {
+					return errors.New(event.Error)
+				}
+			}
+
 			return nil
 		}
 
@@ -129,31 +173,6 @@ func (c Client) pollRequestCompletedDeletingVM(id string) error {
 
 		time.Sleep(c.pollingInterval)
 	}
-
-	return nil
-}
-
-func (c Client) isIncidentCompleted(id string) (bool, error) {
-	turbulenceResponse, err := c.makeRequest("GET", fmt.Sprintf("%s/api/v1/incidents/%s", c.baseURL, id), nil)
-	if err != nil {
-		return false, err
-	}
-
-	if turbulenceResponse.ExecutionCompletedAt != "" {
-		if len(turbulenceResponse.Events) == 0 {
-			return false, errors.New("There should at least be one Event in response from turbulence.")
-		}
-
-		for _, event := range turbulenceResponse.Events {
-			if event.Error != "" {
-				return false, errors.New(event.Error)
-			}
-		}
-
-		return true, nil
-	}
-
-	return false, nil
 }
 
 func (c Client) makeRequest(method string, path string, body io.Reader) (Response, error) {
@@ -179,4 +198,8 @@ func (c Client) makeRequest(method string, path string, body io.Reader) (Respons
 	}
 
 	return turbulenceResponse, nil
+}
+
+func (c Client) Incident(id string) (Response, error) {
+	return c.makeRequest("GET", fmt.Sprintf("%s/api/v1/incidents/%s", c.baseURL, id), nil)
 }

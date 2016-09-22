@@ -41,9 +41,18 @@ const expectedDelayPOSTRequest = `{
 
 const successfulPOSTResponse = `{
 	"ID": "someID",
-	"ExecutionStartedAt": "0001-01-01T00:00:00Z",
+	"ExecutionStartedAt": "",
 	"ExecutionCompletedAt": "",
 	"Events": null
+}`
+
+const successfulInitialIncompleteGETResponse = `{
+	"ID": "someID",
+	"ExecutionStartedAt": "",
+	"ExecutionCompletedAt": "",
+	"Events": [
+		{"Error": ""}
+	]
 }`
 
 const successfulIncompleteGETResponse = `{
@@ -51,7 +60,10 @@ const successfulIncompleteGETResponse = `{
 	"ExecutionStartedAt": "0001-01-01T00:00:00Z",
 	"ExecutionCompletedAt": "",
 	"Events": [
-		{"Error": ""}
+		{
+			"Type": "ControlNet",
+			"ExecutionStartedAt": "0001-01-01T00:00:00Z"
+		}
 	]
 }`
 
@@ -89,12 +101,13 @@ type fakeTurbulenceServer struct {
 	POSTResponse          string
 	GETResponses          []string
 	postIncidentCallCount int
+	getIncidentCallCount  int
 }
 
 func NewFakeTurbulenceServer() *fakeTurbulenceServer {
 	fakeServer := new(fakeTurbulenceServer)
 	fakeServer.POSTResponse = successfulPOSTResponse
-	fakeServer.GETResponses = []string{successfulIncompleteGETResponse, successfulCompleteGETResponse}
+	fakeServer.GETResponses = []string{successfulInitialIncompleteGETResponse, successfulIncompleteGETResponse, successfulCompleteGETResponse}
 
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		switch {
@@ -105,6 +118,7 @@ func NewFakeTurbulenceServer() *fakeTurbulenceServer {
 			writer.Write([]byte(fakeServer.POSTResponse))
 
 		case request.URL.Path == "/api/v1/incidents/someID" && request.Method == "GET":
+			fakeServer.getIncidentCallCount++
 			writer.Write([]byte(fakeServer.GETResponses[0]))
 			if len(fakeServer.GETResponses) > 1 {
 				fakeServer.GETResponses = fakeServer.GETResponses[1:]
@@ -181,19 +195,38 @@ var _ = Describe("Client", func() {
 			client = turbulence.NewClient(fakeServer.URL, 100*time.Millisecond, 40*time.Millisecond)
 		})
 
-		It("makes a GET request to create a control-network delay incident", func() {
-			err := client.Delay("deployment-name", "job-name", []int{0}, time.Second, 2*time.Second)
+		It("makes a POST request to create a control-network delay incident and polls for initial execution", func() {
+			resp, err := client.Delay("deployment-name", "job-name", []int{0}, time.Second, 2*time.Second)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeServer.postIncidentCallCount).To(Equal(1))
 			Expect(fakeServer.errorReadingBody).NotTo(HaveOccurred())
 			Expect(string(fakeServer.receivedPOSTBody)).To(MatchJSON(expectedDelayPOSTRequest))
+			Expect(resp).To(Equal(turbulence.Response{
+				ID:                   "someID",
+				ExecutionStartedAt:   "0001-01-01T00:00:00Z",
+				ExecutionCompletedAt: "",
+				Events: []turbulence.ResponseEvent{
+					{
+						Type:               "ControlNet",
+						ExecutionStartedAt: "0001-01-01T00:00:00Z",
+					},
+				},
+			}))
+
+			Expect(fakeServer.getIncidentCallCount).To(Equal(2))
 		})
 
-		It("returns an error when the post request fails", func() {
+		It("returns an error when the POST request fails", func() {
 			clientWithMalformedBaseURL := turbulence.NewClient("%%%%%", 100*time.Millisecond, 40*time.Millisecond)
-			errorDelaying := clientWithMalformedBaseURL.Delay("deployment-name", "job-name", []int{0}, time.Second, 2*time.Second)
+			_, errorDelaying := clientWithMalformedBaseURL.Delay("deployment-name", "job-name", []int{0}, time.Second, 2*time.Second)
 			Expect(errorDelaying.Error()).To(ContainSubstring("invalid URL escape"))
+		})
+
+		It("returns a timeout error when the control net event does not start in time", func() {
+			fakeServer.GETResponses = []string{successfulInitialIncompleteGETResponse}
+			_, errorDelaying := client.Delay("deployment-name", "job-name", []int{0}, time.Second, 2*time.Second)
+			Expect(errorDelaying.Error()).To(ContainSubstring("Did not start control-net event in time"))
 		})
 	})
 })
