@@ -13,7 +13,11 @@ import (
 )
 
 var _ = Describe("ResolveManifestVersions", func() {
-	It("resolves the latest versions of releases", func() {
+	var (
+		client bosh.Client
+	)
+
+	BeforeEach(func() {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			username, password, ok := r.BasicAuth()
 			Expect(ok).To(BeTrue())
@@ -35,14 +39,93 @@ var _ = Describe("ResolveManifestVersions", func() {
 				Fail("unexpected route")
 			}
 		}))
-
-		client := bosh.NewClient(bosh.Config{
+		client = bosh.NewClient(bosh.Config{
 			URL:                 server.URL,
 			Username:            "some-username",
 			Password:            "some-password",
 			TaskPollingInterval: time.Nanosecond,
 		})
+	})
 
+	It("resolves manifest-v2 latest version of releases", func() {
+		manifest := `---
+director_uuid: some-director-uuid
+name: some-name
+stemcells:
+- alias: default
+  name: some-stemcell-name
+  version: latest
+instance_groups:
+- azs:
+  - z1
+  instances: 3
+  jobs:
+  - name: consul_agent
+    release: consul
+  - name: consul-test-consumer
+    release: consul
+  name: test_consumer
+  networks:
+  - name: private
+    static_ips:
+    - 10.244.4.42
+    - 10.244.4.43
+    - 10.244.4.44
+  stemcell: default
+  vm_type: default
+properties:
+ consul:
+   agent:
+     datacenter: dc1
+     domain: cf.internal
+releases:
+- name: consul
+  version: 2.0.0
+- name: consats
+  version: latest
+`
+
+		resolvedManifest, err := client.ResolveManifestVersions([]byte(manifest))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resolvedManifest).To(gomegamatchers.MatchYAML(`---
+director_uuid: some-director-uuid
+name: some-name
+stemcells:
+- alias: default
+  name: some-stemcell-name
+  version: "2"
+instance_groups:
+- azs:
+  - z1
+  instances: 3
+  jobs:
+  - name: consul_agent
+    release: consul
+  - name: consul-test-consumer
+    release: consul
+  name: test_consumer
+  networks:
+  - name: private
+    static_ips:
+    - 10.244.4.42
+    - 10.244.4.43
+    - 10.244.4.44
+  stemcell: default
+  vm_type: default
+properties:
+ consul:
+   agent:
+     datacenter: dc1
+     domain: cf.internal
+releases:
+- name: consul
+  version: 2.0.0
+- name: consats
+  version: 4.0.0
+`))
+	})
+
+	It("resolves the latest versions of releases", func() {
 		manifest := `---
 director_uuid: some-director-uuid
 name: some-name
