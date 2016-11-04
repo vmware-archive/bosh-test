@@ -150,11 +150,13 @@ var _ = Describe("Stemcell", func() {
 				"389",
 				"3147.2",
 				"3126",
+				"3263.8",
+				"3263.10",
 			}
 
 			version, err := stemcell.Latest()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(version).To(Equal("3147.2"))
+			Expect(version).To(Equal("3263.10"))
 		})
 
 		It("should handle no installed stemcells", func() {
@@ -172,7 +174,7 @@ var _ = Describe("Stemcell", func() {
 			}
 
 			_, err := stemcell.Latest()
-			Expect(err).To(MatchError(`strconv.ParseFloat: parsing "baseball": invalid syntax`))
+			Expect(err).To(MatchError(`Invalid character(s) found in major number "baseball"`))
 		})
 	})
 })

@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"sort"
-	"strconv"
+
+	"github.com/blang/semver"
 )
 
 type Stemcell struct {
@@ -67,26 +67,29 @@ func (c Client) Stemcell(name string) (Stemcell, error) {
 }
 
 func (s Stemcell) Latest() (string, error) {
-	tmp := []float64{}
+	latestVersion := "0"
 
 	if len(s.Versions) == 0 {
 		return "", errors.New("no stemcell versions found, cannot get latest")
 	}
 
 	for _, version := range s.Versions {
-		num, err := strconv.ParseFloat(version, 64)
+
+		semVersion, err := semver.ParseTolerant(version)
 		if err != nil {
 			return "", err
 		}
-		tmp = append(tmp, num)
+
+		semLatestVersion, err := semver.ParseTolerant(latestVersion)
+		if err != nil {
+			// Not tested
+			return "", err
+		}
+
+		if semVersion.GT(semLatestVersion) {
+			latestVersion = version
+		}
 	}
-	sort.Float64s(tmp)
 
-	s.Versions = []string{}
-
-	for _, version := range tmp {
-		s.Versions = append(s.Versions, strconv.FormatFloat(version, 'g', -1, 64))
-	}
-
-	return s.Versions[len(s.Versions)-1], nil
+	return latestVersion, nil
 }
