@@ -164,7 +164,7 @@ var _ = Describe("Client", func() {
 		It("returns an error when a response event is not an empty string", func() {
 			fakeServer.GETResponses = []string{failedGETResponse}
 			errorKillingIndices := client.KillIndices("deployment-name", "job-name", []int{0})
-			Expect(errorKillingIndices).To(MatchError("some-error"))
+			Expect(errorKillingIndices).To(MatchError("There was a turbulence event error. Check out the turbulence events (response id: someID) for more information."))
 		})
 
 		It("returns an error when the base URL is malformed", func() {
