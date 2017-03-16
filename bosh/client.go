@@ -55,6 +55,10 @@ func NewClient(config Config) Client {
 	}
 }
 
+func (c Client) GetConfig() Config {
+	return c.config
+}
+
 func (c Client) rewriteURL(uri string) (string, error) {
 	parsedURL, err := url.Parse(uri)
 	if err != nil {
