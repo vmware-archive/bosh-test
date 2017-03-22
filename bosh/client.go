@@ -20,6 +20,7 @@ var (
 type Config struct {
 	URL                 string
 	Host                string
+	DirectorCACert      string
 	Username            string
 	Password            string
 	TaskPollingInterval time.Duration
