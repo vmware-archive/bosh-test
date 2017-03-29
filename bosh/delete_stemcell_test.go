@@ -6,9 +6,10 @@ import (
 	"net/http/httptest"
 	"time"
 
+	"github.com/pivotal-cf-experimental/bosh-test/bosh"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-cf-experimental/bosh-test/bosh"
 )
 
 var _ = Context("DeleteStemcell", func() {
