@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/http/httputil"
 	"time"
 
 	"github.com/pivotal-cf-experimental/bosh-test/bosh"
@@ -12,14 +13,16 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Context("DeleteStemcell", func() {
+var _ = Context("DeleteRelease", func() {
 	It("deletes the given stemcell", func() {
 		callCount := 0
 
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			switch r.URL.Path {
-			case "/stemcells/something/42":
+			case "/releases/otherthing":
 				Expect(r.Method).To(Equal("DELETE"))
+
+				Expect(r.URL.Query().Get("version")).To(Equal("42"))
 
 				username, password, ok := r.BasicAuth()
 				Expect(ok).To(BeTrue())
@@ -43,7 +46,9 @@ var _ = Context("DeleteStemcell", func() {
 				}
 				callCount++
 			default:
-				Fail("could not match any URL endpoints")
+				req, err := httputil.DumpRequest(r, true)
+				Expect(err).NotTo(HaveOccurred())
+				Fail(string(req))
 			}
 		}))
 
@@ -54,43 +59,10 @@ var _ = Context("DeleteStemcell", func() {
 			TaskPollingInterval: time.Nanosecond,
 		})
 
-		err := client.DeleteStemcell("something", "42")
+		err := client.DeleteRelease("otherthing", "42")
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(callCount).To(Equal(4))
-	})
-
-	Context("when the stemcell is in use", func() {
-		It("returns an InUse error", func() {
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				switch r.URL.Path {
-				case "/stemcells/something/42":
-					w.Header().Set("Location", fmt.Sprintf("http://%s/tasks/1", r.Host))
-					w.WriteHeader(http.StatusFound)
-				case "/tasks/1":
-					w.Write([]byte(`{"Id": 1, "state": "error", "result": "Stemcell something/42 is still in use"}`))
-				case "/tasks/1/output":
-					if r.URL.RawQuery == "type=event" {
-						w.Write([]byte(`
-								{"state": "some-state"}
-								{"error": {"code": 50004, "message": "Stemcell something/42 is still in use"}}
-							`))
-					}
-				default:
-					Fail("could not match any URL endpoints")
-				}
-			}))
-
-			client := bosh.NewClient(bosh.Config{
-				URL:                 server.URL,
-				Username:            "some-username",
-				Password:            "some-password",
-				TaskPollingInterval: time.Nanosecond,
-			})
-
-			err := client.DeleteStemcell("something", "42")
-			Expect(err).To(BeAssignableToTypeOf(bosh.InUse{}))
-		})
 	})
 
 	Context("when an error occurs", func() {
@@ -98,12 +70,14 @@ var _ = Context("DeleteStemcell", func() {
 			It("returns an error", func() {
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					switch r.URL.Path {
-					case "/stemcells/something/42":
+					case "/releases/otherthing":
 						w.Header().Set("Location", fmt.Sprintf("http://%s/tasks/1", r.Host))
 						w.WriteHeader(http.StatusBadRequest)
 						w.Write([]byte("More Info"))
 					default:
-						Fail("could not match any URL endpoints")
+						req, err := httputil.DumpRequest(r, true)
+						Expect(err).NotTo(HaveOccurred())
+						Fail(string(req))
 					}
 				}))
 
@@ -114,7 +88,7 @@ var _ = Context("DeleteStemcell", func() {
 					TaskPollingInterval: time.Nanosecond,
 				})
 
-				err := client.DeleteStemcell("something", "42")
+				err := client.DeleteRelease("otherthing", "42")
 
 				Expect(err).To(MatchError("unexpected response 400 Bad Request:\nMore Info"))
 			})
@@ -124,7 +98,7 @@ var _ = Context("DeleteStemcell", func() {
 			It("returns an error", func() {
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					switch r.URL.Path {
-					case "/stemcells/something/42":
+					case "/releases/otherthing":
 						w.Header().Set("Location", fmt.Sprintf("http://%s/tasks/1", r.Host))
 						w.WriteHeader(http.StatusFound)
 					case "/tasks/1":
@@ -133,11 +107,13 @@ var _ = Context("DeleteStemcell", func() {
 						if r.URL.RawQuery == "type=event" {
 							w.Write([]byte(`
 								{"state": "some-state"}
-								{"error": {"code": 50003, "message": "some other random error"}}
+								{"error": {"code": 4999, "message": "some other random error"}}
 							`))
 						}
 					default:
-						Fail("could not match any URL endpoints")
+						req, err := httputil.DumpRequest(r, true)
+						Expect(err).NotTo(HaveOccurred())
+						Fail(string(req))
 					}
 				}))
 
@@ -148,8 +124,8 @@ var _ = Context("DeleteStemcell", func() {
 					TaskPollingInterval: time.Nanosecond,
 				})
 
-				err := client.DeleteStemcell("something", "42")
-				Expect(err).To(MatchError("task error: 50003 has occurred: some other random error"))
+				err := client.DeleteRelease("otherthing", "42")
+				Expect(err).To(MatchError("task error: 4999 has occurred: some other random error"))
 			})
 		})
 	})
