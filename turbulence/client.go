@@ -123,7 +123,7 @@ func (c Client) pollControlNetStarted(id string) (Response, error) {
 func (c Client) KillIDs(ids []string) error {
 	command := command{
 		Tasks: []interface{}{
-			killTask{Type: "kill"},
+			killTask{Type: "Kill"},
 		},
 		Selector: selector{
 			ID: id{
