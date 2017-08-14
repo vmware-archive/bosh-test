@@ -13,7 +13,7 @@ import (
 
 const expectedKillPOSTRequest = `{
 	"Tasks": [{
-		"Type": "kill"
+		"Type": "Kill"
 	}],
 	"Selector": {
 		"ID": {
