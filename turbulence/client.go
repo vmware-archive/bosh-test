@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"time"
 )
@@ -192,9 +193,11 @@ func (c Client) makeRequest(method string, path string, body io.Reader) (Respons
 	}
 
 	var turbulenceResponse Response
-	err = json.NewDecoder(resp.Body).Decode(&turbulenceResponse)
+	defer resp.Body.Close()
+	bodyBytes, _ := ioutil.ReadAll(resp.Body)
+	err = json.NewDecoder(bytes.NewReader(bodyBytes)).Decode(&turbulenceResponse)
 	if err != nil {
-		return Response{}, errors.New("Unable to decode turbulence response.")
+		return Response{}, fmt.Errorf("Unable to decode turbulence response: %s", string(bodyBytes))
 	}
 
 	return turbulenceResponse, nil

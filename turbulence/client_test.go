@@ -178,7 +178,7 @@ var _ = Describe("Client", func() {
 		It("returns an error when turbulence responds with malformed JSON", func() {
 			fakeServer.POSTResponse = "some-invalid-json"
 			errorKillingIDs := client.KillIDs([]string{"some-id"})
-			Expect(errorKillingIDs.Error()).To(ContainSubstring("Unable to decode turbulence response."))
+			Expect(errorKillingIDs.Error()).To(ContainSubstring("Unable to decode turbulence response: some-invalid-json"))
 		})
 	})
 
