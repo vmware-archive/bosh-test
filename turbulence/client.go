@@ -161,7 +161,7 @@ func (c Client) pollRequestCompletedDeletingVM(id string) error {
 
 			for _, event := range turbulenceResponse.Events {
 				if event.Error != "" {
-					return fmt.Errorf("There was a turbulence event error. Check out the turbulence events (response id: %s) for more information.", id)
+					return fmt.Errorf("There was a turbulence event error: %+v", event)
 				}
 			}
 
