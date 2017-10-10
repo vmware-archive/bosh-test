@@ -24,7 +24,7 @@ const expectedKillPOSTRequest = `{
 
 const expectedDelayPOSTRequest = `{
 	"Tasks": [{
-		"Type": "control-net",
+		"Type": "ControlNet",
 		"Timeout": "2000ms",
 		"Delay": "1000ms"
 	}],
@@ -148,7 +148,7 @@ var _ = Describe("Client", func() {
 			fakeServer.GETResponses = []string{successfulIncompleteGETResponse}
 			errorKillingIDs := client.KillIDs([]string{"some-id"})
 			Expect(errorKillingIDs).NotTo(BeNil())
-			Expect(errorKillingIDs.Error()).To(ContainSubstring("Did not finish deleting VM in time"))
+			Expect(errorKillingIDs.Error()).To(ContainSubstring("Did not finish deleting VM with ID: someID in time: 100000000"))
 		})
 
 		It("returns an error when the turbulence response does not contain any events", func() {
@@ -178,7 +178,7 @@ var _ = Describe("Client", func() {
 		It("returns an error when turbulence responds with malformed JSON", func() {
 			fakeServer.POSTResponse = "some-invalid-json"
 			errorKillingIDs := client.KillIDs([]string{"some-id"})
-			Expect(errorKillingIDs.Error()).To(ContainSubstring("Unable to decode turbulence response: some-invalid-json"))
+			Expect(errorKillingIDs.Error()).To(ContainSubstring("Unable to decode turbulence response: some-invalid-json with request:"))
 		})
 	})
 

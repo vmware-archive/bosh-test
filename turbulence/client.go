@@ -73,7 +73,7 @@ func NewClient(baseURL string, operationTimeout time.Duration, pollingInterval t
 func (c Client) Delay(ids []string, delay time.Duration, timeout time.Duration) (Response, error) {
 	command := command{
 		Tasks: []interface{}{
-			controlNetTask{Type: "control-net",
+			controlNetTask{Type: "ControlNet",
 				Timeout: fmt.Sprintf("%dms", timeout.Nanoseconds()/million),
 				Delay:   fmt.Sprintf("%dms", delay.Nanoseconds()/million)}},
 		Selector: selector{
@@ -169,15 +169,15 @@ func (c Client) pollRequestCompletedDeletingVM(id string) error {
 		}
 
 		if time.Now().Sub(startTime) > c.operationTimeout {
-			return errors.New(fmt.Sprintf("Did not finish deleting VM in time: %d", c.operationTimeout))
+			return errors.New(fmt.Sprintf("Did not finish deleting VM with ID: %s in time: %d", id, c.operationTimeout))
 		}
 
 		time.Sleep(c.pollingInterval)
 	}
 }
 
-func (c Client) makeRequest(method string, path string, body io.Reader) (Response, error) {
-	request, err := http.NewRequest(method, path, body)
+func (c Client) makeRequest(method string, path string, requestBody io.Reader) (Response, error) {
+	request, err := http.NewRequest(method, path, requestBody)
 	if err != nil {
 		return Response{}, err
 	}
@@ -194,10 +194,10 @@ func (c Client) makeRequest(method string, path string, body io.Reader) (Respons
 
 	var turbulenceResponse Response
 	defer resp.Body.Close()
-	bodyBytes, _ := ioutil.ReadAll(resp.Body)
-	err = json.NewDecoder(bytes.NewReader(bodyBytes)).Decode(&turbulenceResponse)
+	responseBodyBytes, _ := ioutil.ReadAll(resp.Body)
+	err = json.NewDecoder(bytes.NewReader(responseBodyBytes)).Decode(&turbulenceResponse)
 	if err != nil {
-		return Response{}, fmt.Errorf("Unable to decode turbulence response: %s", string(bodyBytes))
+		return Response{}, fmt.Errorf("Unable to decode turbulence response: %s with request: %+v", string(responseBodyBytes), request)
 	}
 
 	return turbulenceResponse, nil
