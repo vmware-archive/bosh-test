@@ -25,6 +25,7 @@ type Config struct {
 	Password            string
 	TaskPollingInterval time.Duration
 	AllowInsecureSSL    bool
+	Transport           http.RoundTripper
 }
 
 type Client struct {
@@ -42,16 +43,21 @@ func NewClient(config Config) Client {
 		config.TaskPollingInterval = 5 * time.Second
 	}
 
-	if config.AllowInsecureSSL {
-		transport = &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
+	if config.Transport == nil {
+		config.Transport = http.DefaultTransport
+	}
 
-		client = &http.Client{
-			Transport: transport,
+	if config.AllowInsecureSSL {
+		config.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
 	}
 
+	client = &http.Client{
+		Transport: config.Transport,
+	}
+
+	transport = config.Transport
 	return Client{
 		config: config,
 	}
