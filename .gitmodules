@@ -7,3 +7,6 @@
 [submodule "bosh/vendor/github.com/blang/semver"]
 	path = bosh/vendor/github.com/blang/semver
 	url = https://github.com/blang/semver
+[submodule "bosh/vendor/golang.org/x/oauth2"]
+	path = bosh/vendor/golang.org/x/oauth2
+	url = https://go.googlesource.com/oauth2
