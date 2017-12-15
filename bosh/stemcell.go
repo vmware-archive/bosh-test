@@ -31,8 +31,7 @@ func (c Client) getStemcells(name string) ([]stemcell, error) {
 		return []stemcell{}, err
 	}
 
-	request.SetBasicAuth(c.config.Username, c.config.Password)
-	response, err := client.Do(request)
+	response, err := c.makeRequest(request)
 	if err != nil {
 		return []stemcell{}, err
 	}

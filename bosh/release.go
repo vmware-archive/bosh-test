@@ -21,8 +21,7 @@ func (c Client) Release(name string) (Release, error) {
 		return Release{}, err
 	}
 
-	request.SetBasicAuth(c.config.Username, c.config.Password)
-	response, err := client.Do(request)
+	response, err := c.makeRequest(request)
 	if err != nil {
 		return Release{}, err
 	}

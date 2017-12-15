@@ -11,11 +11,10 @@ func (c Client) UploadStemcell(contents SizeReader) (int, error) {
 		return 0, err
 	}
 
-	request.SetBasicAuth(c.config.Username, c.config.Password)
 	request.Header.Set("Content-Type", "application/x-compressed")
 	request.ContentLength = contents.Size()
 
-	response, err := transport.RoundTrip(request)
+	response, err := c.makeRequest(request)
 	if err != nil {
 		return 0, err
 	}

@@ -12,9 +12,8 @@ func (c Client) Restart(deployment, job string, index int) error {
 		return err
 	}
 
-	request.SetBasicAuth(c.config.Username, c.config.Password)
 	request.Header.Set("Content-Type", "text/yaml")
-	response, err := transport.RoundTrip(request)
+	response, err := c.makeRequest(request)
 	if err != nil {
 		return err
 	}

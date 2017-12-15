@@ -12,10 +12,9 @@ func (c Client) SetVMResurrection(deploymentName, jobName string, jobIndex int, 
 		return err
 	}
 
-	request.SetBasicAuth(c.config.Username, c.config.Password)
 	request.Header.Set("Content-Type", "application/json")
 
-	resp, err := transport.RoundTrip(request)
+	resp, err := c.makeRequest(request)
 	if err != nil {
 		return err
 	}

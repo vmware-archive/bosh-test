@@ -1,14 +1,19 @@
 package bosh
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"time"
+
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/clientcredentials"
 )
 
 var (
@@ -26,6 +31,7 @@ type Config struct {
 	TaskPollingInterval time.Duration
 	AllowInsecureSSL    bool
 	Transport           http.RoundTripper
+	UAA                 bool
 }
 
 type Client struct {
@@ -45,12 +51,13 @@ func NewClient(config Config) Client {
 
 	if config.Transport == nil {
 		config.Transport = http.DefaultTransport
-	}
-
-	if config.AllowInsecureSSL {
-		config.Transport = &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		if config.AllowInsecureSSL {
+			config.Transport = &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			}
 		}
+	} else {
+		config.UAA = true
 	}
 
 	client = &http.Client{
@@ -90,9 +97,8 @@ func (c Client) checkTask(location string) (Task, error) {
 	if err != nil {
 		return task, err
 	}
-	request.SetBasicAuth(c.config.Username, c.config.Password)
+	response, err := c.makeRequest(request)
 
-	response, err := transport.RoundTrip(request)
 	if err != nil {
 		return task, err
 	}
@@ -132,5 +138,34 @@ func (c Client) checkTaskStatus(location string) (int, error) {
 		default:
 			time.Sleep(c.config.TaskPollingInterval)
 		}
+	}
+}
+
+func (c Client) makeRequest(request *http.Request) (*http.Response, error) {
+	if c.config.UAA {
+		urlParts, err := url.Parse(c.config.URL)
+		if err != nil {
+			return &http.Response{}, err
+		}
+
+		boshHost, _, err := net.SplitHostPort(urlParts.Host)
+		if err != nil {
+			return &http.Response{}, err
+		}
+
+		ctx := context.WithValue(context.Background(), oauth2.HTTPClient, &http.Client{
+			Transport: c.config.Transport,
+		})
+		conf := &clientcredentials.Config{
+			ClientID:     c.config.Username,
+			ClientSecret: c.config.Password,
+			TokenURL:     fmt.Sprintf("https://%s:8443/oauth/token", boshHost),
+		}
+
+		httpClient := conf.Client(ctx)
+		return httpClient.Do(request)
+	} else {
+		request.SetBasicAuth(c.config.Username, c.config.Password)
+		return transport.RoundTrip(request)
 	}
 }

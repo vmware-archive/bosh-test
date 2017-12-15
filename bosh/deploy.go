@@ -18,9 +18,8 @@ func (c Client) Deploy(manifest []byte) (int, error) {
 	}
 
 	request.Header.Set("Content-Type", "text/yaml")
-	request.SetBasicAuth(c.config.Username, c.config.Password)
 
-	response, err := transport.RoundTrip(request)
+	response, err := c.makeRequest(request)
 	if err != nil {
 		return 0, err
 	}

@@ -56,10 +56,9 @@ func (c Client) doScanAndFixRequest(deploymentName string, payload map[string]in
 		return err
 	}
 
-	request.SetBasicAuth(c.config.Username, c.config.Password)
 	request.Header.Set("Content-Type", "application/json")
 
-	response, err := transport.RoundTrip(request)
+	response, err := c.makeRequest(request)
 	if err != nil {
 		return err
 	}

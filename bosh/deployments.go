@@ -18,9 +18,8 @@ func (c Client) Deployments() ([]Deployment, error) {
 	if err != nil {
 		return nil, err
 	}
-	request.SetBasicAuth(c.config.Username, c.config.Password)
 
-	response, err := transport.RoundTrip(request)
+	response, err := c.makeRequest(request)
 	if err != nil {
 		return nil, err
 	}

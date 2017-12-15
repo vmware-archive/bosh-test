@@ -37,9 +37,8 @@ func (c Client) GetTaskOutput(taskId int) ([]TaskOutput, error) {
 	if err != nil {
 		return []TaskOutput{}, err
 	}
-	request.SetBasicAuth(c.config.Username, c.config.Password)
 
-	response, err := transport.RoundTrip(request)
+	response, err := c.makeRequest(request)
 	if err != nil {
 		return []TaskOutput{}, err
 	}
