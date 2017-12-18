@@ -49,15 +49,11 @@ func NewClient(config Config) Client {
 		config.TaskPollingInterval = 5 * time.Second
 	}
 
-	if config.Transport == nil {
-		config.Transport = http.DefaultTransport
-		if config.AllowInsecureSSL {
-			config.Transport = &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-			}
+	config.Transport = http.DefaultTransport
+	if config.AllowInsecureSSL {
+		config.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
-	} else {
-		config.UAA = true
 	}
 
 	client = &http.Client{
