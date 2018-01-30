@@ -1,9 +1,10 @@
 package bosh
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
+
+	"github.com/cloudfoundry/bosh-cli/director"
+	boshlog "github.com/cloudfoundry/bosh-utils/logger"
 )
 
 type DirectorInfo struct {
@@ -12,26 +13,29 @@ type DirectorInfo struct {
 }
 
 func (c Client) Info() (DirectorInfo, error) {
-	response, err := client.Get(fmt.Sprintf("%s/info", c.config.URL))
+	logger := boshlog.NewLogger(boshlog.LevelNone)
+
+	factoryConfig, err := director.NewConfigFromURL(c.config.URL)
 	if err != nil {
-		return DirectorInfo{}, err
+		return DirectorInfo{}, fmt.Errorf("Creating factory config from url %s: %s", c.config.URL, err)
 	}
 
-	if response.StatusCode != http.StatusOK {
-		body, err := bodyReader(response.Body)
-		if err != nil {
-			return DirectorInfo{}, err
-		}
-		defer response.Body.Close()
+	factoryConfig.CACert = c.config.DirectorCACert
 
-		return DirectorInfo{}, fmt.Errorf("unexpected response %d %s:\n%s", response.StatusCode, http.StatusText(response.StatusCode), body)
-	}
-
-	info := DirectorInfo{}
-	err = json.NewDecoder(response.Body).Decode(&info)
+	d, err := director.NewFactory(logger).New(factoryConfig, director.NewNoopTaskReporter(), director.NewNoopFileReporter())
 	if err != nil {
-		return DirectorInfo{}, err
+		return DirectorInfo{}, fmt.Errorf("Creating director with factory: %s", err)
 	}
 
-	return info, nil
+	info, err := d.Info()
+	if err != nil {
+		return DirectorInfo{}, fmt.Errorf("Getting /info from director: %s", err)
+	}
+
+	output := DirectorInfo{
+		UUID: info.UUID,
+		CPI:  info.CPI,
+	}
+
+	return output, nil
 }
