@@ -46,6 +46,7 @@ var _ = Context("DeleteStemcell", func() {
 				Fail("could not match any URL endpoints")
 			}
 		}))
+		defer server.Close()
 
 		client := bosh.NewClient(bosh.Config{
 			URL:                 server.URL,
@@ -80,6 +81,7 @@ var _ = Context("DeleteStemcell", func() {
 					Fail("could not match any URL endpoints")
 				}
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:                 server.URL,
@@ -106,6 +108,7 @@ var _ = Context("DeleteStemcell", func() {
 						Fail("could not match any URL endpoints")
 					}
 				}))
+				defer server.Close()
 
 				client := bosh.NewClient(bosh.Config{
 					URL:                 server.URL,
@@ -140,6 +143,7 @@ var _ = Context("DeleteStemcell", func() {
 						Fail("could not match any URL endpoints")
 					}
 				}))
+				defer server.Close()
 
 				client := bosh.NewClient(bosh.Config{
 					URL:                 server.URL,

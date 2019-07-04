@@ -59,6 +59,7 @@ var _ = Describe("ScanAndFix", func() {
 					Fail("unexpected route")
 				}
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:                 server.URL,
@@ -118,6 +119,7 @@ var _ = Describe("ScanAndFix", func() {
 					Fail("unexpected route")
 				}
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:                 server.URL,
@@ -184,6 +186,7 @@ jobs:
 				w.Header().Set("Location", "%%%%%%%%%%%")
 				w.WriteHeader(http.StatusFound)
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:      server.URL,
@@ -200,6 +203,7 @@ jobs:
 				w.WriteHeader(http.StatusBadRequest)
 				w.Write([]byte("More Info"))
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:      server.URL,
@@ -216,6 +220,7 @@ jobs:
 				w.WriteHeader(http.StatusBadRequest)
 				w.Write([]byte("More Info"))
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:      server.URL,

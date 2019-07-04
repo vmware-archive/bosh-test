@@ -53,6 +53,10 @@ var _ = Describe("Cleanup", func() {
 		}))
 	})
 
+	AfterEach(func() {
+		server.Close()
+	})
+
 	It("cleans up the bosh director", func() {
 		client := bosh.NewClient(bosh.Config{
 			URL:      server.URL,

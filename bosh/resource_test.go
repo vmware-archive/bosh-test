@@ -30,6 +30,10 @@ var _ = Describe("Resource", func() {
 		}))
 	})
 
+	AfterEach(func() {
+		server.Close()
+	})
+
 	It("returns the specified resource", func() {
 		client := bosh.NewClient(bosh.Config{
 			URL:      server.URL,

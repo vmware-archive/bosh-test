@@ -67,6 +67,10 @@ var _ = Describe("ExportRelease", func() {
 		}))
 	})
 
+	AfterEach(func() {
+		server.Close()
+	})
+
 	It("exports the release and returns a resource ID for the release artifact", func() {
 		client := bosh.NewClient(bosh.Config{
 			URL:      server.URL,

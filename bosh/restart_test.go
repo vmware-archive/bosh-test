@@ -50,6 +50,7 @@ var _ = Describe("Restart", func() {
 					Fail("unexpected route")
 				}
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:                 server.URL,
@@ -69,6 +70,8 @@ var _ = Describe("Restart", func() {
 					w.WriteHeader(http.StatusInternalServerError)
 					w.Write([]byte("something bad happened"))
 				}))
+				defer server.Close()
+
 				client := bosh.NewClient(bosh.Config{
 					URL:      server.URL,
 					Username: "some-username",
@@ -106,6 +109,7 @@ var _ = Describe("Restart", func() {
 					w.Header().Set("Location", "%%%%%%%%%%%")
 					w.WriteHeader(http.StatusFound)
 				}))
+				defer server.Close()
 
 				client := bosh.NewClient(bosh.Config{
 					URL:      server.URL,
@@ -122,6 +126,7 @@ var _ = Describe("Restart", func() {
 					w.WriteHeader(http.StatusBadRequest)
 					w.Write([]byte("More Info"))
 				}))
+				defer server.Close()
 
 				client := bosh.NewClient(bosh.Config{
 					URL:      server.URL,

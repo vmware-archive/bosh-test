@@ -27,6 +27,7 @@ var _ = Describe("release", func() {
 
 				w.Write([]byte(`{"versions":["some-version","some-version.1","some-version.2"]}`))
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:      server.URL,
@@ -48,6 +49,7 @@ var _ = Describe("release", func() {
 					w.WriteHeader(http.StatusBadRequest)
 					w.Write([]byte("More Info"))
 				}))
+				defer server.Close()
 
 				client := bosh.NewClient(bosh.Config{
 					URL:      server.URL,
@@ -65,6 +67,7 @@ var _ = Describe("release", func() {
 					Expect(r.URL.Path).To(Equal("/releases/some-release-name"))
 					w.WriteHeader(http.StatusNotFound)
 				}))
+				defer server.Close()
 
 				client := bosh.NewClient(bosh.Config{
 					URL:      server.URL,
@@ -92,6 +95,7 @@ var _ = Describe("release", func() {
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.Write([]byte(`&&%%%%%&%&%&%&%&%&%&%&`))
 				}))
+				defer server.Close()
 
 				client := bosh.NewClient(bosh.Config{
 					URL:      server.URL,
@@ -120,6 +124,7 @@ var _ = Describe("release", func() {
 					w.WriteHeader(http.StatusTeapot)
 					w.Write([]byte("More info"))
 				}))
+				defer testServer.Close()
 
 				client := bosh.NewClient(bosh.Config{
 					URL: testServer.URL,

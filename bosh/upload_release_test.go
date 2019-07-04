@@ -68,6 +68,10 @@ var _ = Describe("UploadRelease", func() {
 		}))
 	})
 
+	AfterEach(func() {
+		server.Close()
+	})
+
 	It("uploads the release to the director", func() {
 		client := bosh.NewClient(bosh.Config{
 			URL:      server.URL,

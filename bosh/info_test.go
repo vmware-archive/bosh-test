@@ -21,6 +21,7 @@ var _ = Describe("Info", func() {
 
 			w.Write([]byte(`{"uuid":"some-director-uuid", "cpi":"some-cpi"}`))
 		}))
+		defer server.Close()
 
 		client := bosh.NewClient(bosh.Config{
 			URL:                 server.URL,
@@ -41,6 +42,7 @@ var _ = Describe("Info", func() {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Write([]byte(`&&%%%%%&%&%&%&%&%&%&%&`))
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:                 server.URL,
@@ -67,6 +69,7 @@ var _ = Describe("Info", func() {
 				w.WriteHeader(http.StatusBadGateway)
 				w.Write([]byte("More Info"))
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:      server.URL,
@@ -83,6 +86,7 @@ var _ = Describe("Info", func() {
 				w.WriteHeader(http.StatusBadGateway)
 				w.Write([]byte("More Info"))
 			}))
+			defer testServer.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL: testServer.URL,

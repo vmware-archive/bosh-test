@@ -51,6 +51,7 @@ var _ = Context("DeleteRelease", func() {
 				Fail(string(req))
 			}
 		}))
+		defer server.Close()
 
 		client := bosh.NewClient(bosh.Config{
 			URL:                 server.URL,
@@ -80,6 +81,7 @@ var _ = Context("DeleteRelease", func() {
 						Fail(string(req))
 					}
 				}))
+				defer server.Close()
 
 				client := bosh.NewClient(bosh.Config{
 					URL:                 server.URL,
@@ -116,6 +118,7 @@ var _ = Context("DeleteRelease", func() {
 						Fail(string(req))
 					}
 				}))
+				defer server.Close()
 
 				client := bosh.NewClient(bosh.Config{
 					URL:                 server.URL,

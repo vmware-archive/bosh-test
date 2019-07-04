@@ -30,6 +30,7 @@ var _ = Describe("DownloadManifest", func() {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"manifest": "some-manifest-contents"}`))
 		}))
+		defer testServer.Close()
 
 		client := bosh.NewClient(bosh.Config{
 			URL:      testServer.URL,
@@ -71,6 +72,7 @@ var _ = Describe("DownloadManifest", func() {
 				w.WriteHeader(http.StatusTeapot)
 				w.Write([]byte("More Info"))
 			}))
+			defer testServer.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL: testServer.URL,
@@ -87,6 +89,7 @@ var _ = Describe("DownloadManifest", func() {
 				w.WriteHeader(http.StatusTeapot)
 				w.Write([]byte("More Info"))
 			}))
+			defer testServer.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL: testServer.URL,
@@ -107,6 +110,7 @@ var _ = Describe("DownloadManifest", func() {
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte("%%%%%%"))
 			}))
+			defer testServer.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL: testServer.URL,
