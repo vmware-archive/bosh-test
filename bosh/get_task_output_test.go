@@ -69,6 +69,10 @@ var _ = Describe("GetTaskOutput", func() {
 		))
 	})
 
+	AfterEach(func() {
+		server.Close()
+	})
+
 	Context("failure cases", func() {
 		It("error on a malformed URL", func() {
 			client := bosh.NewClient(bosh.Config{

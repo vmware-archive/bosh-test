@@ -38,6 +38,7 @@ var _ = Describe("Deployments", func() {
 				}
 			]`))
 		}))
+		defer server.Close()
 
 		client := bosh.NewClient(bosh.Config{
 			URL:      server.URL,
@@ -111,6 +112,7 @@ var _ = Describe("Deployments", func() {
 				w.WriteHeader(http.StatusBadGateway)
 				w.Write([]byte("More Info"))
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:      server.URL,
@@ -126,6 +128,7 @@ var _ = Describe("Deployments", func() {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Write([]byte(`%%%%%%%%`))
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:      server.URL,

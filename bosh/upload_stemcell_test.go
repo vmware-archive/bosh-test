@@ -51,6 +51,10 @@ var _ = Describe("UploadStemcell", func() {
 		}))
 	})
 
+	AfterEach(func() {
+		server.Close()
+	})
+
 	It("uploads the stemcell to the director", func() {
 		client := bosh.NewClient(bosh.Config{
 			URL:      server.URL,

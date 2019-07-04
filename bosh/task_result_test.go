@@ -32,6 +32,10 @@ var _ = Describe("TaskResult", func() {
 		}))
 	})
 
+	AfterEach(func() {
+		server.Close()
+	})
+
 	It("fetches the result of a task", func() {
 		client := bosh.NewClient(bosh.Config{
 			URL:      server.URL,

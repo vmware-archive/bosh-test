@@ -39,6 +39,7 @@ var _ = Describe("SetVMResurrection", func() {
 
 				w.WriteHeader(http.StatusTeapot)
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:      server.URL,
@@ -78,6 +79,7 @@ var _ = Describe("SetVMResurrection", func() {
 				w.WriteHeader(http.StatusTeapot)
 				w.Write([]byte("something bad happened"))
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:      server.URL,
@@ -94,6 +96,7 @@ var _ = Describe("SetVMResurrection", func() {
 				w.WriteHeader(http.StatusTeapot)
 				w.Write([]byte(""))
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:      server.URL,

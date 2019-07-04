@@ -56,6 +56,7 @@ var _ = Describe("DeploymentVMs", func() {
 				Fail("unknown route")
 			}
 		}))
+		defer server.Close()
 
 		client := bosh.NewClient(bosh.Config{
 			URL:      server.URL,
@@ -128,6 +129,7 @@ var _ = Describe("DeploymentVMs", func() {
 					Fail("unexpected route")
 				}
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:      server.URL,
@@ -145,6 +147,7 @@ var _ = Describe("DeploymentVMs", func() {
 				w.WriteHeader(http.StatusNotFound)
 				w.Write([]byte("More Info"))
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:      server.URL,
@@ -162,6 +165,7 @@ var _ = Describe("DeploymentVMs", func() {
 				w.Header().Set("Location", "http://%%%%%/tasks/1")
 				w.WriteHeader(http.StatusFound)
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:      server.URL,
@@ -179,6 +183,7 @@ var _ = Describe("DeploymentVMs", func() {
 				w.WriteHeader(http.StatusFound)
 				w.Write([]byte("%%%%%%\n%%%%%%%%%%%\n"))
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:      server.URL,
@@ -204,6 +209,7 @@ var _ = Describe("DeploymentVMs", func() {
 					Fail("unexpected route")
 				}
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:      server.URL,
@@ -224,6 +230,7 @@ var _ = Describe("DeploymentVMs", func() {
 				w.WriteHeader(http.StatusNotFound)
 				w.Write([]byte("More Info"))
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:      server.URL,

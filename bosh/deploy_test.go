@@ -55,6 +55,7 @@ var _ = Describe("Deploy", func() {
 				Fail("could not match any URL endpoints")
 			}
 		}))
+		defer server.Close()
 
 		client := bosh.NewClient(bosh.Config{
 			URL:                 server.URL,
@@ -84,6 +85,7 @@ var _ = Describe("Deploy", func() {
 					Fail("could not match any URL endpoints")
 				}
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:                 server.URL,
@@ -110,6 +112,7 @@ var _ = Describe("Deploy", func() {
 					Fail("could not match any URL endpoints")
 				}
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL: server.URL,
@@ -142,6 +145,7 @@ var _ = Describe("Deploy", func() {
 					Fail("could not match any URL endpoints")
 				}
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:                 server.URL,
@@ -170,6 +174,7 @@ var _ = Describe("Deploy", func() {
 					Fail("could not match any URL endpoints")
 				}
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:                 server.URL,
@@ -198,6 +203,7 @@ var _ = Describe("Deploy", func() {
 					Fail("could not match any URL endpoints")
 				}
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:                 server.URL,
@@ -229,6 +235,7 @@ var _ = Describe("Deploy", func() {
 					Fail("could not match any URL endpoints")
 				}
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:                 server.URL,
@@ -253,6 +260,7 @@ var _ = Describe("Deploy", func() {
 					Fail("could not match any URL endpoints")
 				}
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:                 server.URL,
@@ -270,6 +278,7 @@ var _ = Describe("Deploy", func() {
 				w.Header().Set("Location", fmt.Sprintf("http://%s/%%%%%%%%%%%%%%", r.Host))
 				w.WriteHeader(http.StatusFound)
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:                 server.URL,
@@ -317,6 +326,7 @@ var _ = Describe("Deploy", func() {
 				w.WriteHeader(http.StatusFound)
 				w.Write([]byte(`&&%%%%%&%&%&%&%&%&%&%&`))
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:                 server.URL,

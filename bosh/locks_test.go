@@ -29,6 +29,7 @@ var _ = Describe("locks", func() {
 
 			w.Write([]byte(`[{"type":"deployment","resource":["some-deployment"],"timeout":"1475796348.793560"}]`))
 		}))
+		defer server.Close()
 
 		client = bosh.NewClient(bosh.Config{
 			URL:      server.URL,
@@ -60,6 +61,7 @@ var _ = Describe("locks", func() {
 			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				server.CloseClientConnections()
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL: server.URL,
@@ -86,6 +88,7 @@ var _ = Describe("locks", func() {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Write([]byte("Some invalid JSON"))
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL: server.URL,

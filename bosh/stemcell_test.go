@@ -32,6 +32,7 @@ var _ = Describe("stemcell", func() {
 				]`))
 
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:      server.URL,
@@ -53,6 +54,7 @@ var _ = Describe("stemcell", func() {
 					w.WriteHeader(http.StatusBadRequest)
 					w.Write([]byte("More Info"))
 				}))
+				defer server.Close()
 
 				client := bosh.NewClient(bosh.Config{
 					URL:      server.URL,
@@ -70,6 +72,7 @@ var _ = Describe("stemcell", func() {
 					Expect(r.URL.Path).To(Equal("/stemcells"))
 					w.WriteHeader(http.StatusNotFound)
 				}))
+				defer server.Close()
 
 				client := bosh.NewClient(bosh.Config{
 					URL:      server.URL,
@@ -107,6 +110,7 @@ var _ = Describe("stemcell", func() {
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.Write([]byte(`&&%%%%%&%&%&%&%&%&%&%&`))
 				}))
+				defer server.Close()
 
 				client := bosh.NewClient(bosh.Config{
 					URL:      server.URL,
@@ -125,6 +129,7 @@ var _ = Describe("stemcell", func() {
 					w.WriteHeader(http.StatusTeapot)
 					w.Write([]byte("More info"))
 				}))
+				defer testServer.Close()
 
 				client := bosh.NewClient(bosh.Config{
 					URL: testServer.URL,
@@ -158,6 +163,7 @@ var _ = Describe("stemcell", func() {
 				]`))
 
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:      server.URL,
@@ -179,6 +185,7 @@ var _ = Describe("stemcell", func() {
 					w.WriteHeader(http.StatusBadRequest)
 					w.Write([]byte("More Info"))
 				}))
+				defer server.Close()
 
 				client := bosh.NewClient(bosh.Config{
 					URL:      server.URL,
@@ -196,6 +203,7 @@ var _ = Describe("stemcell", func() {
 					Expect(r.URL.Path).To(Equal("/stemcells"))
 					w.WriteHeader(http.StatusNotFound)
 				}))
+				defer server.Close()
 
 				client := bosh.NewClient(bosh.Config{
 					URL:      server.URL,
@@ -233,6 +241,7 @@ var _ = Describe("stemcell", func() {
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.Write([]byte(`&&%%%%%&%&%&%&%&%&%&%&`))
 				}))
+				defer server.Close()
 
 				client := bosh.NewClient(bosh.Config{
 					URL:      server.URL,
@@ -251,6 +260,7 @@ var _ = Describe("stemcell", func() {
 					w.WriteHeader(http.StatusTeapot)
 					w.Write([]byte("More info"))
 				}))
+				defer testServer.Close()
 
 				client := bosh.NewClient(bosh.Config{
 					URL: testServer.URL,

@@ -36,6 +36,7 @@ var _ = Describe("UpdateCloudConfig", func() {
 
 			w.WriteHeader(http.StatusCreated)
 		}))
+		defer testServer.Close()
 
 		client := bosh.NewClient(bosh.Config{
 			URL:      testServer.URL,
@@ -77,6 +78,7 @@ var _ = Describe("UpdateCloudConfig", func() {
 				w.WriteHeader(http.StatusTeapot)
 				w.Write([]byte("More info"))
 			}))
+			defer testServer.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL: testServer.URL,
@@ -97,6 +99,7 @@ var _ = Describe("UpdateCloudConfig", func() {
 				w.WriteHeader(http.StatusTeapot)
 				w.Write([]byte("More info"))
 			}))
+			defer testServer.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL: testServer.URL,

@@ -48,6 +48,7 @@ var _ = Context("DeleteDeployment", func() {
 				Fail("could not match any URL endpoints")
 			}
 		}))
+		defer server.Close()
 
 		client := bosh.NewClient(bosh.Config{
 			URL:                 server.URL,
@@ -85,6 +86,7 @@ var _ = Context("DeleteDeployment", func() {
 					Fail("could not match any URL endpoints")
 				}
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:                 server.URL,
@@ -111,6 +113,7 @@ var _ = Context("DeleteDeployment", func() {
 					Fail("could not match any URL endpoints")
 				}
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:                 server.URL,
@@ -147,6 +150,7 @@ var _ = Context("DeleteDeployment", func() {
 					Fail("could not match any URL endpoints")
 				}
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:                 server.URL,
@@ -178,6 +182,7 @@ var _ = Context("DeleteDeployment", func() {
 					Fail("could not match any URL endpoints")
 				}
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:                 server.URL,
@@ -202,6 +207,7 @@ var _ = Context("DeleteDeployment", func() {
 					Fail("could not match any URL endpoints")
 				}
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:                 server.URL,
@@ -219,6 +225,7 @@ var _ = Context("DeleteDeployment", func() {
 				w.Header().Set("Location", fmt.Sprintf("http://%s/%%%%%%%%%%%%%%", r.Host))
 				w.WriteHeader(http.StatusFound)
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:                 server.URL,
@@ -257,6 +264,7 @@ var _ = Context("DeleteDeployment", func() {
 				w.WriteHeader(http.StatusFound)
 				w.Write([]byte(`&&%%%%%&%&%&%&%&%&%&%&`))
 			}))
+			defer server.Close()
 
 			client := bosh.NewClient(bosh.Config{
 				URL:                 server.URL,
